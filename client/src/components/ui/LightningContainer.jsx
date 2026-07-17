@@ -1,18 +1,3 @@
-export default function LightningContainer({
-  children,
-  className = "",
-}) {
-  return (
-    <div
-      className={`
-        max-w-7xl
-        mx-auto
-        px-6
-        lg:px-8
-        ${className}
-      `}
-    >
-      {children}
-    </div>
-  );
+export default function LightningCard({ children }) {
+  return <div>{children}</div>;
 }
