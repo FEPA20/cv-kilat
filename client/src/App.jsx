@@ -2,9 +2,8 @@ import { lazy, useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 import LandingPage from "./pages/LandingPage";
-import LoginModal from "./components/LoginModal";
-import ResetPasswordModal from "./components/ResetPasswordModal";
 import CookieConsentBanner from "./components/CookieConsentBanner";
+
 
 const TemplatesPage = lazy(() => import("./pages/TemplatesPage"));
 const BuilderPage = lazy(() => import("./pages/BuilderPage"));
@@ -27,6 +26,13 @@ const CookiePolicyPage = lazy(() =>
   import("./pages/CookiePolicyPage")
 );
 const ContactPage = lazy(() => import("./pages/ContactPage"));
+const LoginModal = lazy(() =>
+  import("./components/LoginModal")
+);
+
+const ResetPasswordModal = lazy(() =>
+  import("./components/ResetPasswordModal")
+);
 
 const loadCvTemplateTools = () =>
   import("./data/cvTemplates");
