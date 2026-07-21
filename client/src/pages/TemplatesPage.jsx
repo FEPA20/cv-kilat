@@ -4,12 +4,9 @@ import { CV_TEMPLATES } from "../data/cvTemplates";
 
 const CATEGORIES = [
   "Semua",
-  "Profesional",
-  "ATS",
-  "Manager",
-  "Fresh Graduate",
-  "Operasional",
-  "Teknologi",
+  ...Array.from(
+    new Set(CV_TEMPLATES.map((template) => template.category))
+  ),
 ];
 
 export default function TemplatesPage({
@@ -89,7 +86,7 @@ export default function TemplatesPage({
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-xs font-bold text-amber-300">
                   <SparkIcon className="h-4 w-4" />
-                  Template CV siap diedit
+                  {CV_TEMPLATES.length} template CV siap diedit
                 </div>
 
                 <h1 className="mt-6 max-w-4xl text-4xl font-black leading-[1.08] tracking-[-0.045em] sm:text-5xl lg:text-[62px]">
@@ -152,12 +149,12 @@ export default function TemplatesPage({
                   Galeri Template
                 </p>
                 <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Temukan CV sesuai tujuan karier
+                  Temukan CV sesuai tujuan karier Anda
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
-                  Klik preview untuk melihat isi contoh. Setelah memilih,
-                  tentukan apakah data contoh ikut digunakan atau hanya
-                  desainnya.
+                  Tersedia {CV_TEMPLATES.length} pilihan untuk berbagai profesi.
+                  Klik preview untuk melihat isi contoh, lalu gunakan data
+                  contoh lengkap atau ambil desainnya saja.
                 </p>
               </div>
 

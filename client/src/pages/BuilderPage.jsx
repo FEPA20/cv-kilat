@@ -1,6 +1,7 @@
 // BuilderPage Rich Text V5 — selected-text formatting + formatted preview
 import { useEffect, useMemo, useRef, useState } from "react";
-import ProtectedCanvasPreview from "../components/ProtectedCanvasPreview";
+import ProfessionalCVPreview from "../components/ProfessionalCVPreview";
+import { applyTextFormatting } from "../utils/textFormatting";
 
 const STEPS = [
   "Kontak",
@@ -100,69 +101,6 @@ const stripFormatting = (value = "") =>
 // RICH TEXT ENGINE V5
 // Memformat teks yang dipilih dan merender hasilnya dengan aman di preview.
 // ======================================================
-export function applyTextFormatting(value, selectionStart, selectionEnd, type) {
-  const selected = value.slice(selectionStart, selectionEnd);
-  const hasSelection = selectionEnd > selectionStart;
-
-  const wrappers = {
-    bold: ["**", "**", "teks penting"],
-    italic: ["_", "_", "teks miring"],
-    underline: ["<u>", "</u>", "teks bergaris bawah"],
-    strike: ["~~", "~~", "teks dicoret"],
-  };
-
-  if (wrappers[type]) {
-    const [before, after, placeholder] = wrappers[type];
-    const content = hasSelection ? selected : placeholder;
-    const replacement = `${before}${content}${after}`;
-    const nextValue = `${value.slice(0, selectionStart)}${replacement}${value.slice(selectionEnd)}`;
-    const contentStart = selectionStart + before.length;
-    return {
-      nextValue,
-      nextSelectionStart: contentStart,
-      nextSelectionEnd: contentStart + content.length,
-    };
-  }
-
-  if (type === "link") {
-    const label = hasSelection ? selected : "tautan";
-    const replacement = `[${label}](https://)`;
-    const nextValue = `${value.slice(0, selectionStart)}${replacement}${value.slice(selectionEnd)}`;
-    const urlStart = selectionStart + label.length + 3;
-    return {
-      nextValue,
-      nextSelectionStart: urlStart,
-      nextSelectionEnd: urlStart + 8,
-    };
-  }
-
-  if (type === "ordered" || type === "bullet") {
-    const markerFor = (index) => (type === "ordered" ? `${index + 1}. ` : "• ");
-
-    if (hasSelection) {
-      const lines = selected.split("\n");
-      const replacement = lines.map((line, index) => `${markerFor(index)}${line}`).join("\n");
-      const nextValue = `${value.slice(0, selectionStart)}${replacement}${value.slice(selectionEnd)}`;
-      return {
-        nextValue,
-        nextSelectionStart: selectionStart,
-        nextSelectionEnd: selectionStart + replacement.length,
-      };
-    }
-
-    const marker = markerFor(0);
-    const nextValue = `${value.slice(0, selectionStart)}${marker}${value.slice(selectionEnd)}`;
-    const nextCursor = selectionStart + marker.length;
-    return {
-      nextValue,
-      nextSelectionStart: nextCursor,
-      nextSelectionEnd: nextCursor,
-    };
-  }
-
-  return null;
-}
-
 function renderInlineFormatting(text, keyPrefix) {
   const tokenPattern = /(\*\*.+?\*\*|~~.+?~~|<u>.+?<\/u>|_.+?_|\[[^\]]+\]\([^)]+\))/g;
   const tokens = text.split(tokenPattern).filter((token) => token !== "");
@@ -724,7 +662,7 @@ export default function BuilderPage({
 
   return (
     <div className="min-h-screen bg-slate-100 lg:h-screen lg:overflow-hidden">
-      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[minmax(0,1fr)_minmax(560px,0.92fr)]">
+      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[minmax(340px,1fr)_minmax(680px,2fr)]">
         <section className="flex min-h-screen flex-col border-r border-slate-200 bg-white lg:h-screen lg:min-h-0">
           <div className="border-b border-slate-200 bg-white px-5 py-4 lg:px-8">
             <div className="relative flex justify-between gap-2 overflow-x-auto pb-1">
@@ -739,7 +677,7 @@ export default function BuilderPage({
           </div>
 
           <div className="flex-1 overflow-y-auto bg-slate-50 px-5 py-7 lg:px-8">
-            <div className="mx-auto max-w-4xl">{renderStepContent()}</div>
+            <div className="mx-auto max-w-[620px]">{renderStepContent()}</div>
           </div>
 
           <div className="flex items-center justify-between border-t border-slate-200 bg-white px-5 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.04)] lg:px-8">
@@ -749,23 +687,24 @@ export default function BuilderPage({
         </section>
 
         <aside className="bg-slate-200 px-5 py-5 lg:h-screen lg:overflow-y-auto lg:px-7">
-          <div className="mx-auto max-w-3xl">
+          <div className="mx-auto max-w-[1240px]">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"><span className={`mr-2 rounded-lg px-2 py-1 font-bold ${score >= 80 ? "bg-emerald-100 text-emerald-700" : score >= 50 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>{score}%</span>Skor resume Anda</div>
               <select value={template} onChange={(e) => setTemplate(e.target.value)} className="rounded-xl border-0 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none"><option value="modern">Template Modern</option><option value="ats">Template ATS</option><option value="simple">Template Simple</option></select>
               <select value={language} onChange={(e) => setLanguage(e.target.value)} className="rounded-xl border-0 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none"><option value="ID">Indonesia</option><option value="EN">English</option></select>
-              <span className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700">
-                🔒 Preview aman
+              <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
+                Preview besar • Tajam
               </span>
             </div>
 
-            <ProtectedCanvasPreview
+            <ProfessionalCVPreview
               refreshKey={form}
-              previewWidth={650}
-              viewportHeight={690}
               sourceWidth={720}
-              captureScale={0.58}
-              jpegQuality={0.72}
+              viewportHeight={820}
+              minZoom={0.5}
+              maxZoom={1.25}
+              defaultZoom={1}
+              defaultMode="actual-size"
             >
               <div
                 className={`relative min-h-[940px] w-[720px] overflow-hidden bg-white p-10 text-slate-800 ${paperClass}`}
@@ -789,7 +728,7 @@ export default function BuilderPage({
               {form.certifications.length ? <section className="mt-6"><h2 className="border-b border-slate-200 pb-1 text-xs font-bold tracking-[0.16em] text-slate-700">{sectionLabels.certifications}</h2><div className="mt-3 space-y-2 text-sm text-slate-600">{form.certifications.filter((item) => item.name).map((item) => <p key={item.id}><strong>{item.name}</strong>{item.issuer ? ` — ${item.issuer}` : ""}{item.year ? ` (${item.year})` : ""}</p>)}</div></section> : null}
               {form.hobbies.some((item) => item.name) ? <section className="mt-6"><h2 className="border-b border-slate-200 pb-1 text-xs font-bold tracking-[0.16em] text-slate-700">{sectionLabels.hobbies}</h2><p className="mt-3 text-sm text-slate-600">{form.hobbies.map((item) => item.name).filter(Boolean).join(" • ")}</p></section> : null}
               </div>
-            </ProtectedCanvasPreview>
+            </ProfessionalCVPreview>
           </div>
         </aside>
       </div>

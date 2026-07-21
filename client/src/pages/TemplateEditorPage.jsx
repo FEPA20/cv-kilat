@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 import { supabase } from "../lib/supabase";
-import ProtectedCanvasPreview from "../components/ProtectedCanvasPreview";
+import ProfessionalCVPreview from "../components/ProfessionalCVPreview";
 import AIPhotoStudio from "../components/photo/AIPhotoStudio";
 import LogoCVKilat from "../components/LogoCVKilat";
 
@@ -1691,7 +1691,7 @@ const spellIssues = useMemo(() => {
         </div>
       </header>
 
-      <div className="grid min-h-[calc(100vh-80px)] lg:grid-cols-[128px_382px_minmax(720px,1fr)]">
+      <div className="grid min-h-[calc(100vh-80px)] lg:grid-cols-[112px_340px_minmax(680px,2fr)]">
         <nav className="border-r border-slate-200 bg-white px-3 py-5">
           <div className="sticky top-24 space-y-2">
             {PANELS.map((item) => (
@@ -1707,28 +1707,29 @@ const spellIssues = useMemo(() => {
           {renderActivePanel()}
         </section>
 
-        <main className="overflow-auto bg-slate-200 px-8 py-7">
-          <div className="mx-auto mb-5 flex w-[794px] items-center justify-between">
+        <main className="overflow-auto bg-slate-200 px-5 py-6 xl:px-8">
+          <div className="mx-auto mb-5 flex w-full max-w-[1240px] items-center justify-between">
             <input value={documentName} onChange={(event) => setDocumentName(event.target.value)} className="max-w-sm border-0 bg-transparent text-sm font-semibold text-sky-600 outline-none" aria-label="Nama dokumen" />
             <div className="flex items-center gap-3">
-              <span className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700">
-                🔒 Preview aman
+              <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
+                Preview besar • Tajam
               </span>
               <select value={data.design.language} onChange={(event) => updateDesign("language", event.target.value)} className="rounded-xl border-0 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none"><option value="ID">Indonesia</option><option value="EN">English</option></select>
             </div>
           </div>
-          <div className="mx-auto w-fit shadow-2xl">
-            <ProtectedCanvasPreview
+          <div className="mx-auto w-full max-w-[1240px]">
+            <ProfessionalCVPreview
               ref={cvRef}
               refreshKey={data}
-              previewWidth={650}
-              viewportHeight={690}
               sourceWidth={794}
-              captureScale={0.58}
-              jpegQuality={0.72}
+              viewportHeight={820}
+              minZoom={0.5}
+              maxZoom={1.25}
+              defaultZoom={1}
+              defaultMode="actual-size"
             >
               <TemplatePreview data={data} />
-            </ProtectedCanvasPreview>
+            </ProfessionalCVPreview>
           </div>
         </main>
       </div>
