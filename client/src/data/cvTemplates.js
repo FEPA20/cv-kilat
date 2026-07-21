@@ -643,7 +643,7 @@ export const CV_TEMPLATES = [
         certification("React Developer", "Digital Skill Academy", "2023"),
       ],
     },
-  },,
+  },
 
 {
   id: "admin-office",
