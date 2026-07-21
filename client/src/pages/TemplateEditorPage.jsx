@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
 import { supabase } from "../lib/supabase";
 import ProfessionalCVPreview from "../components/ProfessionalCVPreview";
 import AIPhotoStudio from "../components/photo/AIPhotoStudio";
@@ -1011,12 +1010,14 @@ const downloadPDF = async () => {
       );
     }
 
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-      compress: true,
-    });
+    const { default: jsPDF } = await import("jspdf");
+
+const pdf = new jsPDF({
+  orientation: "portrait",
+  unit: "mm",
+  format: "a4",
+  compress: true,
+});
 
     const pageWidth = 210;
     const pageHeight = 297;

@@ -1,26 +1,35 @@
-import { useEffect, useState } from "react";
+import { lazy, useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 import LandingPage from "./pages/LandingPage";
-import TemplatesPage from "./pages/TemplatesPage";
-import BuilderPage from "./pages/BuilderPage";
-import TemplateEditorPage from "./pages/TemplateEditorPage";
-import DashboardPage from "./pages/DashboardPage";
-import CoverLetterPage from "./pages/CoverLetterPage";
-import UploadDocumentPage from "./pages/UploadDocumentPage";
 import LoginModal from "./components/LoginModal";
 import ResetPasswordModal from "./components/ResetPasswordModal";
 import CookieConsentBanner from "./components/CookieConsentBanner";
 
-import TermsPage from "./pages/TermsPage";
-import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
-import CookiePolicyPage from "./pages/CookiePolicyPage";
-import ContactPage from "./pages/ContactPage";
+const TemplatesPage = lazy(() => import("./pages/TemplatesPage"));
+const BuilderPage = lazy(() => import("./pages/BuilderPage"));
+const TemplateEditorPage = lazy(() =>
+  import("./pages/TemplateEditorPage")
+);
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const CoverLetterPage = lazy(() =>
+  import("./pages/CoverLetterPage")
+);
+const UploadDocumentPage = lazy(() =>
+  import("./pages/UploadDocumentPage")
+);
 
-import {
-  createBlankCvData,
-  createTemplateDraft,
-} from "./data/cvTemplates";
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const PrivacyPolicyPage = lazy(() =>
+  import("./pages/PrivacyPolicyPage")
+);
+const CookiePolicyPage = lazy(() =>
+  import("./pages/CookiePolicyPage")
+);
+const ContactPage = lazy(() => import("./pages/ContactPage"));
+
+const loadCvTemplateTools = () =>
+  import("./data/cvTemplates");
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -238,7 +247,10 @@ export default function App() {
     setPage("templates");
   };
 
-  const openBlankBuilder = () => {
+  const openBlankBuilder = async () => {
+    const { createBlankCvData } =
+      await loadCvTemplateTools();
+
     const draft = createBlankCvData();
 
     localStorage.setItem(
@@ -257,65 +269,73 @@ export default function App() {
     setPage("builder");
   };
 
+  const openImportedCv = async (importedData) => {
+    const { createBlankCvData } =
+      await loadCvTemplateTools();
 
-const openImportedCv = (importedData) => {
-  const base = createBlankCvData();
-  const draft = {
-    ...base,
-    ...importedData,
-    contact: {
-      ...(base.contact || {}),
-      ...(importedData?.contact || {}),
-    },
-    experiences: importedData?.experiences?.length
-      ? importedData.experiences
-      : base.experiences,
-    education: importedData?.education?.length
-      ? importedData.education
-      : base.education,
-    skills: importedData?.skills || [],
-    languages: importedData?.languages?.length
-      ? importedData.languages
-      : base.languages,
-    hobbies: importedData?.hobbies || [],
-    certifications: importedData?.certifications || [],
-    design: {
-      ...(base.design || {}),
-      ...(importedData?.design || {}),
-    },
+    const base = createBlankCvData();
+    const draft = {
+      ...base,
+      ...importedData,
+      contact: {
+        ...(base.contact || {}),
+        ...(importedData?.contact || {}),
+      },
+      experiences: importedData?.experiences?.length
+        ? importedData.experiences
+        : base.experiences,
+      education: importedData?.education?.length
+        ? importedData.education
+        : base.education,
+      skills: importedData?.skills || [],
+      languages: importedData?.languages?.length
+        ? importedData.languages
+        : base.languages,
+      hobbies: importedData?.hobbies || [],
+      certifications: importedData?.certifications || [],
+      design: {
+        ...(base.design || {}),
+        ...(importedData?.design || {}),
+      },
+    };
+
+    localStorage.setItem(
+      "cv-kilat-builder-draft",
+      JSON.stringify(draft)
+    );
+    localStorage.removeItem("cv-kilat-design-draft");
+
+    setEditData({
+      id: null,
+      data: draft,
+      source: "uploaded-document",
+    });
+    setDesignData(null);
+    setDesignRecordId(null);
+    setPage("builder");
   };
 
-  localStorage.setItem(
-    "cv-kilat-builder-draft",
-    JSON.stringify(draft)
-  );
-  localStorage.removeItem("cv-kilat-design-draft");
+  const openImportedCoverLetter = (importedLetter) => {
+    localStorage.setItem(
+      "cv-kilat-cover-letter-draft-v1",
+      JSON.stringify({
+        letter: importedLetter,
+        letterId: null,
+        selectedCvId: "",
+      })
+    );
 
-  setEditData({
-    id: null,
-    data: draft,
-    source: "uploaded-document",
-  });
-  setDesignData(null);
-  setDesignRecordId(null);
-  setPage("builder");
-};
+    setCoverLetterCv(null);
+    setPage("cover-letter");
+  };
 
-const openImportedCoverLetter = (importedLetter) => {
-  localStorage.setItem(
-    "cv-kilat-cover-letter-draft-v1",
-    JSON.stringify({
-      letter: importedLetter,
-      letterId: null,
-      selectedCvId: "",
-    })
-  );
+  const handleUseTemplate = async (
+    template,
+    mode = "sample"
+  ) => {
+    const { createTemplateDraft } =
+      await loadCvTemplateTools();
 
-  setCoverLetterCv(null);
-  setPage("cover-letter");
-};
-
-  const handleUseTemplate = (template, mode = "sample") => {
     const draft = createTemplateDraft(template, mode);
 
     localStorage.setItem(

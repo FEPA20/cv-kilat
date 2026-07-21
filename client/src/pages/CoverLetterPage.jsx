@@ -1,6 +1,5 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
 import { supabase } from "../lib/supabase";
 import LogoCVKilat from "../components/LogoCVKilat";
 
@@ -302,6 +301,8 @@ export default function CoverLetterPage({
 
     try {
       if (user) await saveLetter();
+
+      const { default: jsPDF } = await import("jspdf");
 
       const canvas = await html2canvas(letterRef.current, {
         scale: 2,
