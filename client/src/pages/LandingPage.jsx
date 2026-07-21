@@ -69,16 +69,17 @@ export default function LandingPage({
           HEADER
       ===================================================== */}
       <Header
-        user={user}
-        onStart={onStart}
-        onLogin={onLogin}
-        onLogout={onLogout}
-      />
+  user={user}
+  onStart={onStart}
+  onLogin={onLogin}
+  onLogout={onLogout}
+/>
 
-      {/* =====================================================
-          HERO
-      ===================================================== */}
-      <HeroSection
+<main id="main-content">
+  {/* =====================================================
+      HERO
+  ===================================================== */}
+  <HeroSection
         onStart={onStart}
         onLogin={onLogin}
       />
@@ -331,6 +332,7 @@ export default function LandingPage({
           </div>
         </div>
       </section>
+      </main>
 
       {/* =====================================================
           FOOTER
@@ -342,12 +344,12 @@ export default function LandingPage({
               CV <span className="text-amber-400">Kilat</span>
             </p>
 
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-400">
               CV profesional dalam hitungan menit.
             </p>
           </div>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-400">
             © {new Date().getFullYear()} CV Kilat. Seluruh hak dilindungi.
           </p>
         </div>

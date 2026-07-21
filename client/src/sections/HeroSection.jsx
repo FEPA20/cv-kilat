@@ -54,7 +54,7 @@ export default function HeroSection({
             </button>
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-slate-500">
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-slate-600">
             <FeatureCheck text="Tanpa kemampuan desain" />
             <FeatureCheck text="Preview langsung" />
             <FeatureCheck text="Siap diunduh PDF" />
@@ -146,7 +146,7 @@ export default function HeroSection({
                 <header className="relative border-b border-slate-200 pb-6">
                   <div className="flex items-start justify-between gap-5">
                     <div>
-                      <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-sky-600">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-sky-700">
                         Curriculum Vitae
                       </p>
 
@@ -154,7 +154,7 @@ export default function HeroSection({
                         Febby Pahlawan
                       </h2>
 
-                      <p className="mt-1 text-sm font-extrabold text-[#d99b00]">
+                      <p className="mt-1 text-sm font-extrabold text-[#9a6700]">
                         Warehouse Manager
                       </p>
                     </div>
@@ -206,10 +206,10 @@ export default function HeroSection({
                     <p className="mt-2 text-[11px] font-black text-slate-850">
                       S1 Manajemen
                     </p>
-                    <p className="mt-1 text-[10px] text-slate-500">
+                    <p className="mt-1 text-[10px] text-slate-600">
                       Universitas Indonesia
                     </p>
-                    <p className="mt-1 text-[9px] font-semibold text-slate-400">
+                    <p className="mt-1 text-[9px] font-semibold text-slate-600">
                       2014 — 2018
                     </p>
                   </div>
@@ -226,7 +226,7 @@ export default function HeroSection({
                 <div className="mt-5 rounded-2xl bg-slate-50 px-4 py-3">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-600">
                         Pencapaian
                       </p>
                       <p className="mt-1 text-[11px] font-extrabold text-slate-800">
@@ -253,7 +253,7 @@ export default function HeroSection({
               <p className="text-xs font-black text-slate-900">
                 Langsung bisa diedit
               </p>
-              <p className="mt-0.5 text-[10px] text-slate-500">
+              <p className="mt-0.5 text-[10px] text-slate-600">
                 Ganti data contoh menjadi data Anda
               </p>
             </div>
@@ -309,17 +309,17 @@ function TimelineItem({
       <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-start">
         <div>
           <p className="text-[11px] font-black text-slate-900">{title}</p>
-          <p className="mt-0.5 text-[10px] font-bold text-[#d99b00]">
+          <p className="mt-0.5 text-[10px] font-bold text-[#9a6700]">
             {company}
           </p>
         </div>
 
-        <span className="shrink-0 text-[9px] font-bold text-slate-400">
+        <span className="shrink-0 text-[9px] font-bold text-slate-600">
           {period}
         </span>
       </div>
 
-      <ul className="mt-2 space-y-1 text-[9.5px] leading-4 text-slate-500">
+      <ul className="mt-2 space-y-1 text-[9.5px] leading-4 text-slate-600">
         {bullets.map((bullet) => (
           <li key={bullet} className="flex gap-2">
             <span className="text-sky-500">•</span>
@@ -356,7 +356,7 @@ function SkillBar({ label, value }) {
     <div className="mb-3">
       <div className="flex items-center justify-between gap-3 text-[9px] font-semibold text-slate-300">
         <span>{label}</span>
-        <span className="text-slate-400">{value}</span>
+        <span className="text-slate-300">{value}</span>
       </div>
       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
         <div
