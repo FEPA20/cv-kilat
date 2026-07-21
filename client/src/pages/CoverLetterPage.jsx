@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 import { supabase } from "../lib/supabase";
 import LogoCVKilat from "../components/LogoCVKilat";

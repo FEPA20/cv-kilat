@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export const COOKIE_CONSENT_KEY = "cv-kilat-cookie-consent-v1";
+const COOKIE_CONSENT_KEY = "cv-kilat-cookie-consent-v1";
 
 const DEFAULT_PREFERENCES = {
   essential: true,
@@ -10,7 +10,7 @@ const DEFAULT_PREFERENCES = {
   updatedAt: "",
 };
 
-export function getCookiePreferences() {
+function getCookiePreferences() {
   try {
     const saved = JSON.parse(
       localStorage.getItem(COOKIE_CONSENT_KEY)
@@ -28,7 +28,7 @@ export function getCookiePreferences() {
   }
 }
 
-export function hasCookieConsent(category) {
+function hasCookieConsent(category) {
   const preferences = getCookiePreferences();
 
   if (category === "essential") return true;

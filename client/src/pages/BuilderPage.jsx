@@ -208,7 +208,7 @@ function FormattedText({ value, className = "" }) {
 // Menghasilkan baris bullet/nomor berikutnya saat Enter.
 // Fungsi dibuat murni agar mudah diuji dan tidak bergantung pada state React.
 // ======================================================
-export function computeAutoListEnter(value, selectionStart, selectionEnd) {
+function computeAutoListEnter(value, selectionStart, selectionEnd) {
   const lineStart = value.lastIndexOf("\n", Math.max(0, selectionStart - 1)) + 1;
   const nextLineBreak = value.indexOf("\n", selectionStart);
   const lineEnd = nextLineBreak === -1 ? value.length : nextLineBreak;

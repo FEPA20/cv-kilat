@@ -17,13 +17,6 @@ export const LEGAL_CONFIG = {
   cookieVersion: "1.0",
 };
 
-export const LEGAL_PAGE_KEYS = {
-  TERMS: "terms",
-  PRIVACY: "privacy",
-  COOKIES: "cookies",
-  CONTACT: "contact",
-};
-
 export function hasIncompleteLegalConfig() {
   return Object.values({
     operatorName: LEGAL_CONFIG.operatorName,

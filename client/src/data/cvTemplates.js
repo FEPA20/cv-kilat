@@ -1812,7 +1812,3 @@ export function createTemplateDraft(template, mode = "sample") {
 
   return normalizeTemplateSample(template);
 }
-
-export function getTemplateById(templateId) {
-  return CV_TEMPLATES.find((template) => template.id === templateId) || null;
-}
