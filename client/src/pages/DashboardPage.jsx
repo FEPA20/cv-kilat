@@ -130,6 +130,7 @@ export default function DashboardPage({
   user,
   onCreate,
   onEdit,
+  onUploadDocument,
   onCreateCoverLetter,
   onLogout,
   onBack,
@@ -281,6 +282,7 @@ export default function DashboardPage({
             averageScore={averageScore}
             onCreate={onCreate}
             onEdit={onEdit}
+            onUploadDocument={onUploadDocument}
             onDelete={handleDelete}
             deletingId={deletingId}
             onCreateCoverLetter={onCreateCoverLetter}
@@ -450,6 +452,7 @@ function DashboardOverview({
   averageScore,
   onCreate,
   onEdit,
+  onUploadDocument,
   onDelete,
   deletingId,
   onCreateCoverLetter,
@@ -464,42 +467,27 @@ function DashboardOverview({
         <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-amber-400/15 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 right-8 h-72 w-72 rounded-full bg-sky-400/20 blur-3xl" />
 
-        <div className="relative flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
-          <div>
-            <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
-              <SparkIcon className="h-4 w-4" />
-              Ruang Kerja CV Kilat
-            </p>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Selamat datang, {displayName}.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              Kelola CV, tingkatkan kesiapan ATS, dan lanjutkan proses lamaran
-              kerja dari satu dasbor yang terorganisasi.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 self-start sm:flex-row lg:self-center">
-            <button
-              type="button"
-              onClick={onCreate}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 px-6 py-3.5 font-extrabold text-slate-950 shadow-xl shadow-amber-500/20 transition hover:-translate-y-0.5 hover:bg-amber-300"
-            >
-              <PlusIcon className="h-5 w-5" />
-              Buat CV Baru
-            </button>
-            <button
-              type="button"
-              disabled={!selectedCv}
-              onClick={() => selectedCv && onCreateCoverLetter?.(selectedCv)}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-6 py-3.5 font-extrabold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <LetterIcon className="h-5 w-5" />
-              Surat Lamaran
-            </button>
-          </div>
+        <div className="relative">
+          <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
+            <SparkIcon className="h-4 w-4" />
+            Ruang Kerja CV Kilat
+          </p>
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+            Selamat datang, {displayName}.
+          </h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
+            Mulai dokumen baru, impor dokumen lama, atau susun surat lamaran
+            dari satu ruang kerja yang terorganisasi.
+          </p>
         </div>
       </section>
+
+      <QuickActionCards
+        selectedCv={selectedCv}
+        onCreate={onCreate}
+        onUploadDocument={onUploadDocument}
+        onCreateCoverLetter={onCreateCoverLetter}
+      />
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
@@ -573,6 +561,121 @@ function DashboardOverview({
         </section>
       )}
     </>
+  );
+}
+
+
+function QuickActionCards({
+  selectedCv,
+  onCreate,
+  onUploadDocument,
+  onCreateCoverLetter,
+}) {
+  const actions = [
+    {
+      id: "create-cv",
+      eyebrow: "Mulai dari template",
+      title: "Buat CV Baru",
+      description:
+        "Pilih template profesional lalu isi atau sesuaikan data Anda.",
+      helper: "20+ template siap diedit",
+      icon: PlusIcon,
+      iconClass: "bg-amber-100 text-amber-700",
+      buttonClass:
+        "bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-amber-200",
+      actionLabel: "Mulai Buat CV",
+      onClick: onCreate,
+    },
+    {
+      id: "upload-document",
+      eyebrow: "Gunakan dokumen lama",
+      title: "Upload CV / Surat Lamaran",
+      description:
+        "Unggah PDF atau DOCX agar dokumen lama dapat diperiksa dan diperbarui.",
+      helper: "CV dan surat lamaran",
+      icon: UploadIcon,
+      iconClass: "bg-sky-100 text-sky-700",
+      buttonClass:
+        "bg-sky-500 text-white hover:bg-sky-600 shadow-sky-200",
+      actionLabel: "Upload Dokumen",
+      onClick: onUploadDocument,
+    },
+    {
+      id: "create-letter",
+      eyebrow: "Dokumen pendamping",
+      title: "Buat Surat Lamaran",
+      description:
+        "Gunakan CV tersimpan sebagai dasar surat lamaran yang konsisten.",
+      helper: selectedCv ? "CV aktif siap digunakan" : "Bisa dimulai tanpa CV",
+      icon: LetterIcon,
+      iconClass: "bg-violet-100 text-violet-700",
+      buttonClass:
+        "bg-violet-600 text-white hover:bg-violet-700 shadow-violet-200",
+      actionLabel: "Buat Surat Lamaran",
+      onClick: () => onCreateCoverLetter?.(selectedCv || null),
+    },
+  ];
+
+  return (
+    <section className="mt-6">
+      <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">
+            Mulai pekerjaan
+          </p>
+          <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">
+            Apa yang ingin Anda buat?
+          </h2>
+        </div>
+        <p className="text-sm text-slate-500">
+          Pilih satu alur untuk memulai.
+        </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {actions.map((action) => {
+          const Icon = action.icon;
+
+          return (
+            <article
+              key={action.id}
+              className="group flex min-h-[250px] flex-col rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl sm:p-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <span
+                  className={`flex h-13 w-13 items-center justify-center rounded-2xl ${action.iconClass}`}
+                >
+                  <Icon className="h-6 w-6" />
+                </span>
+
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-500">
+                  {action.helper}
+                </span>
+              </div>
+
+              <p className="mt-5 text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
+                {action.eyebrow}
+              </p>
+              <h3 className="mt-2 text-xl font-extrabold text-slate-900">
+                {action.title}
+              </h3>
+              <p className="mt-2 flex-1 text-sm leading-6 text-slate-500">
+                {action.description}
+              </p>
+
+              <button
+                type="button"
+                onClick={action.onClick}
+                className={`mt-5 inline-flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-extrabold shadow-lg transition ${action.buttonClass}`}
+              >
+                {action.actionLabel}
+                <ArrowRightIcon className="h-4 w-4 transition group-hover:translate-x-1" />
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -1576,6 +1679,26 @@ function PlusIcon(props) {
   return (
     <IconBase {...props}>
       <path d="M12 5v14M5 12h14" />
+    </IconBase>
+  );
+}
+
+
+function UploadIcon(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 16V4" />
+      <path d="m7 9 5-5 5 5" />
+      <path d="M5 14v5h14v-5" />
+    </IconBase>
+  );
+}
+
+function ArrowRightIcon(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M5 12h14" />
+      <path d="m14 7 5 5-5 5" />
     </IconBase>
   );
 }

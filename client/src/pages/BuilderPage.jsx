@@ -1,4 +1,4 @@
-// BuilderPage Rich Text V5 — selected-text formatting + formatted preview
+// BuilderPage Smart Skill Level V1 — compact score badges without collisions
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProfessionalCVPreview from "../components/ProfessionalCVPreview";
 import { applyTextFormatting } from "../utils/textFormatting";
@@ -13,8 +13,8 @@ const STEPS = [
 ];
 
 const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100";
-const labelClass = "mb-2 block text-sm font-medium text-slate-700";
+  "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100";
+const labelClass = "mb-1.5 block text-[13px] font-medium text-slate-700";
 
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -256,9 +256,9 @@ export function computeAutoListEnter(value, selectionStart, selectionEnd) {
 
 function SectionTitle({ title, description }) {
   return (
-    <div className="mb-6">
-      <h2 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h2>
-      {description ? <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p> : null}
+    <div className="mb-4">
+      <h2 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h2>
+      {description ? <p className="mt-1 text-[13px] leading-5 text-slate-500">{description}</p> : null}
     </div>
   );
 }
@@ -542,20 +542,20 @@ export default function BuilderPage({
       return (
         <>
           <SectionTitle title="Kontak" description="Tambahkan informasi yang memudahkan perekrut menghubungi Anda." />
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="grid gap-5 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="grid gap-3 md:grid-cols-2">
               <label><span className={labelClass}>Nama depan</span><input className={inputClass} value={form.contact.firstName} onChange={(e) => updateContact("firstName", e.target.value)} placeholder="Budi" /></label>
               <label><span className={labelClass}>Nama belakang</span><input className={inputClass} value={form.contact.lastName} onChange={(e) => updateContact("lastName", e.target.value)} placeholder="Santoso" /></label>
             </div>
-            <label className="mt-5 block"><span className={labelClass}>Pekerjaan yang diinginkan</span><input className={inputClass} value={form.contact.desiredJob} onChange={(e) => updateContact("desiredJob", e.target.value)} placeholder="Warehouse Manager" /></label>
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
+            <label className="mt-3 block"><span className={labelClass}>Pekerjaan yang diinginkan</span><input className={inputClass} value={form.contact.desiredJob} onChange={(e) => updateContact("desiredJob", e.target.value)} placeholder="Warehouse Manager" /></label>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
               <label><span className={labelClass}>Telepon</span><input className={inputClass} value={form.contact.phone} onChange={(e) => updateContact("phone", e.target.value)} placeholder="+62 812 3456 7890" /></label>
               <label><span className={labelClass}>Email</span><input type="email" className={inputClass} value={form.contact.email} onChange={(e) => updateContact("email", e.target.value)} placeholder="nama@email.com" /></label>
             </div>
-            <details className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4" open>
-              <summary className="cursor-pointer font-semibold text-sky-600">Informasi tambahan</summary>
-              <label className="mt-4 block"><span className={labelClass}>Alamat</span><input className={inputClass} value={form.contact.address} onChange={(e) => updateContact("address", e.target.value)} placeholder="Nama jalan dan nomor" /></label>
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3" open>
+              <summary className="cursor-pointer text-[13px] font-semibold text-sky-600">Informasi tambahan</summary>
+              <label className="mt-3 block"><span className={labelClass}>Alamat</span><input className={inputClass} value={form.contact.address} onChange={(e) => updateContact("address", e.target.value)} placeholder="Nama jalan dan nomor" /></label>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <label><span className={labelClass}>Kota</span><input className={inputClass} value={form.contact.city} onChange={(e) => updateContact("city", e.target.value)} placeholder="Jakarta" /></label>
                 <label><span className={labelClass}>Negara</span><input className={inputClass} value={form.contact.country} onChange={(e) => updateContact("country", e.target.value)} placeholder="Indonesia" /></label>
                 <label><span className={labelClass}>Kode pos</span><input className={inputClass} value={form.contact.postalCode} onChange={(e) => updateContact("postalCode", e.target.value)} placeholder="14240" /></label>
@@ -664,25 +664,25 @@ export default function BuilderPage({
     <div className="min-h-screen bg-slate-100 lg:h-screen lg:overflow-hidden">
       <div className="grid min-h-screen lg:h-screen lg:grid-cols-[minmax(340px,1fr)_minmax(680px,2fr)]">
         <section className="flex min-h-screen flex-col border-r border-slate-200 bg-white lg:h-screen lg:min-h-0">
-          <div className="border-b border-slate-200 bg-white px-5 py-4 lg:px-8">
+          <div className="border-b border-slate-200 bg-white px-4 py-2.5 lg:px-5">
             <div className="relative flex justify-between gap-2 overflow-x-auto pb-1">
-              <div className="absolute left-5 right-5 top-[34px] h-px bg-slate-200" />
+              <div className="absolute left-4 right-4 top-[27px] h-px bg-slate-200" />
               {STEPS.map((item, index) => (
-                <button key={item} type="button" onClick={() => setStep(index)} className="relative z-10 min-w-max px-2 text-center">
-                  <span className={`block text-sm ${step === index ? "font-semibold text-sky-600" : index < step ? "font-medium text-slate-700" : "text-slate-400"}`}>{item}</span>
-                  <span className={`mx-auto mt-3 block h-3 w-3 rounded-full border-2 bg-white ${step === index ? "border-sky-500 ring-4 ring-sky-100" : index < step ? "border-sky-400" : "border-slate-200"}`} />
+                <button key={item} type="button" onClick={() => setStep(index)} className="relative z-10 min-w-max px-1 text-center">
+                  <span className={`block text-xs ${step === index ? "font-semibold text-sky-600" : index < step ? "font-medium text-slate-700" : "text-slate-400"}`}>{item}</span>
+                  <span className={`mx-auto mt-2 block h-2.5 w-2.5 rounded-full border-2 bg-white ${step === index ? "border-sky-500 ring-4 ring-sky-100" : index < step ? "border-sky-400" : "border-slate-200"}`} />
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-slate-50 px-5 py-7 lg:px-8">
-            <div className="mx-auto max-w-[620px]">{renderStepContent()}</div>
+          <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-4 lg:px-5">
+            <div className="mx-auto max-w-[600px]">{renderStepContent()}</div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-slate-200 bg-white px-5 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.04)] lg:px-8">
-            <button type="button" onClick={goPrevious} className="rounded-xl border border-slate-200 bg-white px-6 py-3 font-medium text-slate-700 hover:bg-slate-50">← Kembali</button>
-            {step < STEPS.length - 1 ? <button type="button" onClick={goNext} className="rounded-xl bg-sky-500 px-7 py-3 font-semibold text-white shadow-lg shadow-sky-200 hover:bg-sky-600">Berikutnya: {STEPS[step + 1]} →</button> : <button type="button" onClick={handleContinueDesign} className="rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-7 py-3 font-semibold text-slate-950 shadow-lg shadow-amber-200">Lanjut ke Desain →</button>}
+          <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-2.5 shadow-[0_-8px_24px_rgba(15,23,42,0.04)] lg:px-5">
+            <button type="button" onClick={goPrevious} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">← Kembali</button>
+            {step < STEPS.length - 1 ? <button type="button" onClick={goNext} className="rounded-lg bg-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 hover:bg-sky-600">Berikutnya: {STEPS[step + 1]} →</button> : <button type="button" onClick={handleContinueDesign} className="rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-200">Lanjut ke Desain →</button>}
           </div>
         </section>
 
@@ -722,7 +722,55 @@ export default function BuilderPage({
 
               {form.education.some((item) => item.school || item.degree || item.description) ? <section className="mt-6"><h2 className="border-b border-slate-200 pb-1 text-xs font-bold tracking-[0.16em] text-slate-700">{sectionLabels.education}</h2><div className="mt-3 space-y-4">{form.education.filter((item) => item.school || item.degree || item.description).map((item) => <article key={item.id}><div className="flex items-start justify-between gap-4"><div><h3 className="text-sm font-bold text-slate-800">{item.school || "Nama sekolah"}</h3><p className="text-sm text-slate-500">{[item.degree, item.location].filter(Boolean).join(" • ")}</p></div><p className="whitespace-nowrap text-xs text-slate-400">{item.startDate || "Mulai"} – {item.current ? sectionLabels.present : item.endDate || "Selesai"}</p></div>{stripFormatting(item.description) ? <FormattedText value={item.description} className="mt-2 space-y-1 text-sm leading-6 text-slate-600" /> : null}</article>)}</div></section> : null}
 
-              {form.skills.some((item) => item.name) ? <section className="mt-6"><h2 className="border-b border-slate-200 pb-1 text-xs font-bold tracking-[0.16em] text-slate-700">{sectionLabels.skills}</h2><div className="mt-3 grid grid-cols-2 gap-x-7 gap-y-3">{form.skills.filter((item) => item.name).map((item) => <div key={item.id}><div className="flex justify-between text-sm"><span>{item.name}</span>{form.showSkillLevel ? <span className="text-xs text-slate-400">{levelNames[item.level]}</span> : null}</div>{form.showSkillLevel ? <div className="mt-1"><SkillBars level={item.level} /></div> : null}</div>)}</div></section> : null}
+              {form.skills.some((item) => item.name) ? (
+                <section className="mt-6">
+                  <h2 className="border-b border-slate-200 pb-1 text-xs font-bold tracking-[0.16em] text-slate-700">
+                    {sectionLabels.skills}
+                  </h2>
+
+                  {form.showSkillLevel ? (
+                    <p className="mt-1 text-[9px] font-medium tracking-[0.08em] text-slate-400">
+                      {language === "EN"
+                        ? "LEVEL: 1 BASIC · 3 SKILLED · 5 EXPERT"
+                        : "LEVEL: 1 DASAR · 3 TERAMPIL · 5 AHLI"}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-3 grid grid-cols-2 gap-x-7 gap-y-4">
+                    {form.skills.filter((item) => item.name).map((item) => {
+                      const numericLevel = Math.min(5, Math.max(1, Number(item.level || 1)));
+                      const levelLabel = levelNames[numericLevel];
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="min-w-0"
+                          title={`${item.name}: ${levelLabel} (${numericLevel}/5)`}
+                          aria-label={`${item.name}: ${levelLabel}, ${numericLevel} dari 5`}
+                        >
+                          <p className="break-words text-sm font-medium leading-snug text-slate-700">
+                            {item.name}
+                          </p>
+
+                          {form.showSkillLevel ? (
+                            <div className="mt-1 flex min-w-0 items-center gap-2">
+                              <div className="min-w-0 flex-1">
+                                <SkillBars level={numericLevel} />
+                              </div>
+                              <span
+                                className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-500"
+                                title={levelLabel}
+                              >
+                                {numericLevel}/5
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
 
               {form.languages.some((item) => item.language) ? <section className="mt-6"><h2 className="border-b border-slate-200 pb-1 text-xs font-bold tracking-[0.16em] text-slate-700">{sectionLabels.languages}</h2><div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">{form.languages.filter((item) => item.language).map((item) => <p key={item.id}>{item.language} — {item.level}</p>)}</div></section> : null}
               {form.certifications.length ? <section className="mt-6"><h2 className="border-b border-slate-200 pb-1 text-xs font-bold tracking-[0.16em] text-slate-700">{sectionLabels.certifications}</h2><div className="mt-3 space-y-2 text-sm text-slate-600">{form.certifications.filter((item) => item.name).map((item) => <p key={item.id}><strong>{item.name}</strong>{item.issuer ? ` — ${item.issuer}` : ""}{item.year ? ` (${item.year})` : ""}</p>)}</div></section> : null}

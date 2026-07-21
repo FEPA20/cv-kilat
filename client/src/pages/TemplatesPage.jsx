@@ -738,9 +738,11 @@ function HeroTemplateStack() {
       </div>
 
       <div className="absolute -bottom-1 left-0 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 shadow-xl backdrop-blur-xl">
-        <p className="text-xs font-extrabold text-white">6 template awal</p>
+        <p className="text-xs font-extrabold text-white">
+          {CV_TEMPLATES.length} template tersedia
+        </p>
         <p className="mt-1 text-[11px] text-slate-400">
-          Profesional hingga operasional
+          Beragam profesi dan level karier
         </p>
       </div>
 

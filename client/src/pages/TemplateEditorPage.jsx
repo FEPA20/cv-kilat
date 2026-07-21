@@ -400,7 +400,7 @@ function TemplatePreview({ data }) {
     hobbies: data.hobbies.some((item) => item.name),
   };
 
-  const renderSection = (sectionKey) => {
+  const renderSection = (sectionKey, compact = false) => {
     if (design.hiddenSections.includes(sectionKey) || !sectionExists[sectionKey]) {
       return null;
     }
@@ -485,19 +485,66 @@ function TemplatePreview({ data }) {
     }
 
     if (sectionKey === "skills") {
+      const skillLegend = language === "EN"
+        ? "LEVEL: 1 BASIC · 3 SKILLED · 5 EXPERT"
+        : "LEVEL: 1 DASAR · 3 TERAMPIL · 5 AHLI";
+
       return (
         <section key={sectionKey} style={{ marginTop: design.sectionSpacing }}>
           <SectionHeading design={design} template={template}>{labels.skills}</SectionHeading>
-          <div className="grid grid-cols-2 gap-x-5" style={{ marginTop: design.paragraphSpacing, rowGap: design.paragraphSpacing }}>
-            {data.skills.filter((item) => item.name).map((item) => (
-              <div key={item.id || item.name}>
-                <div className="flex justify-between gap-2" style={{ fontSize: `${12 * fontScale}px` }}>
-                  <span>{item.name}</span>
-                  {data.showSkillLevel ? <span className="text-slate-400">{LEVEL_NAMES[item.level]}</span> : null}
+
+          {data.showSkillLevel ? (
+            <p
+              className="mt-1 text-[8.5px] font-medium tracking-[0.08em] text-slate-400"
+              aria-label={skillLegend}
+            >
+              {skillLegend}
+            </p>
+          ) : null}
+
+          <div
+            className={`grid ${compact ? "grid-cols-1" : "grid-cols-2"} gap-x-5`}
+            style={{
+              marginTop: data.showSkillLevel
+                ? Math.max(5, design.paragraphSpacing - 2)
+                : design.paragraphSpacing,
+              rowGap: Math.max(8, design.paragraphSpacing),
+            }}
+          >
+            {data.skills.filter((item) => item.name).map((item) => {
+              const numericLevel = Math.min(5, Math.max(1, Number(item.level || 1)));
+              const levelLabel = LEVEL_NAMES[numericLevel];
+
+              return (
+                <div
+                  key={item.id || item.name}
+                  className="min-w-0"
+                  title={`${item.name}: ${levelLabel} (${numericLevel}/5)`}
+                  aria-label={`${item.name}: ${levelLabel}, ${numericLevel} dari 5`}
+                >
+                  <p
+                    className="break-words font-medium leading-snug text-slate-800"
+                    style={{ fontSize: `${11.7 * fontScale}px` }}
+                  >
+                    {item.name}
+                  </p>
+
+                  {data.showSkillLevel ? (
+                    <div className="mt-1 flex min-w-0 items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <SkillBars level={numericLevel} color={design.primaryColor} />
+                      </div>
+                      <span
+                        className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8.5px] font-bold tabular-nums text-slate-500"
+                        title={levelLabel}
+                      >
+                        {numericLevel}/5
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
-                {data.showSkillLevel ? <SkillBars level={item.level} color={design.primaryColor} /> : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       );
@@ -601,11 +648,11 @@ function TemplatePreview({ data }) {
 
       {template === "modern" || template === "executive" ? (
         <div className="grid grid-cols-[0.34fr_0.66fr] gap-8">
-          <aside>{sideSections.map(renderSection)}</aside>
-          <main>{mainSections.map(renderSection)}</main>
+          <aside>{sideSections.map((sectionKey) => renderSection(sectionKey, true))}</aside>
+          <main>{mainSections.map((sectionKey) => renderSection(sectionKey, false))}</main>
         </div>
       ) : (
-        <main>{orderedSections.map(renderSection)}</main>
+        <main>{orderedSections.map((sectionKey) => renderSection(sectionKey, false))}</main>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import BuilderPage from "./pages/BuilderPage";
 import TemplateEditorPage from "./pages/TemplateEditorPage";
 import DashboardPage from "./pages/DashboardPage";
 import CoverLetterPage from "./pages/CoverLetterPage";
+import UploadDocumentPage from "./pages/UploadDocumentPage";
 import LoginModal from "./components/LoginModal";
 import ResetPasswordModal from "./components/ResetPasswordModal";
 import CookieConsentBanner from "./components/CookieConsentBanner";
@@ -135,6 +136,7 @@ export default function App() {
           "landing",
           "templates",
           "dashboard",
+          "upload-document",
           "cover-letter",
         ].includes(destination)
       ) {
@@ -254,6 +256,64 @@ export default function App() {
     setDesignRecordId(null);
     setPage("builder");
   };
+
+
+const openImportedCv = (importedData) => {
+  const base = createBlankCvData();
+  const draft = {
+    ...base,
+    ...importedData,
+    contact: {
+      ...(base.contact || {}),
+      ...(importedData?.contact || {}),
+    },
+    experiences: importedData?.experiences?.length
+      ? importedData.experiences
+      : base.experiences,
+    education: importedData?.education?.length
+      ? importedData.education
+      : base.education,
+    skills: importedData?.skills || [],
+    languages: importedData?.languages?.length
+      ? importedData.languages
+      : base.languages,
+    hobbies: importedData?.hobbies || [],
+    certifications: importedData?.certifications || [],
+    design: {
+      ...(base.design || {}),
+      ...(importedData?.design || {}),
+    },
+  };
+
+  localStorage.setItem(
+    "cv-kilat-builder-draft",
+    JSON.stringify(draft)
+  );
+  localStorage.removeItem("cv-kilat-design-draft");
+
+  setEditData({
+    id: null,
+    data: draft,
+    source: "uploaded-document",
+  });
+  setDesignData(null);
+  setDesignRecordId(null);
+  setPage("builder");
+};
+
+const openImportedCoverLetter = (importedLetter) => {
+  localStorage.setItem(
+    "cv-kilat-cover-letter-draft-v1",
+    JSON.stringify({
+      letter: importedLetter,
+      letterId: null,
+      selectedCvId: "",
+    })
+  );
+
+  setCoverLetterCv(null);
+  setPage("cover-letter");
+};
 
   const handleUseTemplate = (template, mode = "sample") => {
     const draft = createTemplateDraft(template, mode);
@@ -541,6 +601,39 @@ export default function App() {
   }
 
   // ======================================================
+  // UPLOAD DOCUMENT PAGE
+  // ======================================================
+  if (page === "upload-document") {
+    if (!user) {
+      return (
+        <>
+          <LandingPage
+            user={null}
+            onStart={openTemplates}
+            onLogin={() => openLogin("dashboard")}
+            onLogout={handleLogout}
+            onOpenLegal={openLegal}
+          />
+
+          {authOverlays}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <UploadDocumentPage
+          user={user}
+          onBack={() => setPage("dashboard")}
+          onImportCv={openImportedCv}
+          onImportCoverLetter={openImportedCoverLetter}
+        />
+        {authOverlays}
+      </>
+    );
+  }
+
+  // ======================================================
   // COVER LETTER PAGE
   // ======================================================
   if (page === "cover-letter") {
@@ -599,6 +692,7 @@ export default function App() {
       <DashboardPage
         user={user}
         onCreate={openTemplates}
+        onUploadDocument={() => setPage("upload-document")}
         onEdit={(cvData) => {
           setEditData(cvData);
           setDesignData(cvData?.data || null);
