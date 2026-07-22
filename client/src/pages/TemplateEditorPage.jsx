@@ -896,11 +896,16 @@ const [photoProcessingMode, setPhotoProcessingMode] =
     setSaveState("saving");
 
     try {
-      let response;
+  const dataToSave = {
+    ...data,
+    updatedAt: new Date().toISOString(),
+  };
+
+  let response;
       if (recordId) {
         response = await supabase
           .from("cv_data")
-          .update({ data })
+          .update({ data: dataToSave })
           .eq("id", recordId)
           .eq("user_id", user)
           .select("id")
@@ -908,7 +913,12 @@ const [photoProcessingMode, setPhotoProcessingMode] =
       } else {
         response = await supabase
           .from("cv_data")
-          .insert([{ user_id: user, data }])
+          .insert([
+  {
+    user_id: user,
+    data: dataToSave,
+  },
+])
           .select("id")
           .single();
       }
@@ -918,7 +928,7 @@ const [photoProcessingMode, setPhotoProcessingMode] =
       const savedId = response.data?.id || recordId;
       setRecordId(savedId);
       setSaveState("saved");
-      onSaved(savedId, data);
+      onSaved(savedId, dataToSave);
       if (!silent) alert("✅ Desain CV berhasil disimpan.");
       return savedId;
     } catch (error) {

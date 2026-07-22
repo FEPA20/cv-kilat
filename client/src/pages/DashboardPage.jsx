@@ -25,9 +25,67 @@ const EMPTY_FORM = {
 };
 
 function getFormData(cv) {
+  const raw =
+    cv?.data && typeof cv.data === "object"
+      ? cv.data
+      : {};
+
+  const contact =
+    raw.contact && typeof raw.contact === "object"
+      ? raw.contact
+      : {};
+
+  const experiences = Array.isArray(raw.experiences)
+    ? raw.experiences
+    : Array.isArray(raw.experience)
+      ? raw.experience
+      : [];
+
   return {
     ...EMPTY_FORM,
-    ...(cv?.data || {}),
+    ...raw,
+
+    firstName:
+      contact.firstName ||
+      raw.firstName ||
+      "",
+
+    lastName:
+      contact.lastName ||
+      raw.lastName ||
+      "",
+
+    name:
+      contact.fullName ||
+      raw.name ||
+      "",
+
+    jobTitle:
+      contact.desiredJob ||
+      raw.jobTitle ||
+      raw.desiredJob ||
+      "",
+
+    email:
+      contact.email ||
+      raw.email ||
+      "",
+
+    phone:
+      contact.phone ||
+      raw.phone ||
+      "",
+
+    experience: experiences,
+    experiences,
+
+    education: Array.isArray(raw.education)
+      ? raw.education
+      : [],
+
+    skills: Array.isArray(raw.skills)
+      ? raw.skills
+      : [],
   };
 }
 
@@ -39,7 +97,16 @@ function getFullName(data) {
 function getDocumentTitle(cv, index = 0) {
   const data = getFormData(cv);
   const fullName = getFullName(data);
-  return `${fullName.replace(/\s+/g, "_")}_CV` || `CV_${index + 1}`;
+
+  if (fullName === "CV Tanpa Nama") {
+    return `CV ${index + 1}`;
+  }
+
+  if (data.jobTitle) {
+    return `${fullName} — ${data.jobTitle}`;
+  }
+
+  return `${fullName} — CV`;
 }
 
 function textHasContent(value) {
@@ -81,16 +148,35 @@ function calculateCvScore(cv) {
   return Math.min(score, 100);
 }
 
+function getDocumentDate(cv) {
+  return (
+    cv?.updated_at ||
+    cv?.created_at ||
+    cv?.data?.updatedAt ||
+    cv?.data?.createdAt ||
+    ""
+  );
+}
+
+function getDocumentTimestamp(cv) {
+  const value = getDocumentDate(cv);
+  const time = new Date(value).getTime();
+
+  return Number.isNaN(time) ? 0 : time;
+}
+
 function formatDate(value) {
-  if (!value) return "Baru saja";
+  if (!value) return "Tanggal belum tersedia";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Baru saja";
+
+  if (Number.isNaN(date.getTime())) {
+    return "Tanggal belum tersedia";
+  }
 
   return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(date);
 }
 
@@ -193,7 +279,11 @@ export default function DashboardPage({
       return;
     }
 
-    const rows = data || [];
+    const rows = [...(data || [])].sort(
+  (a, b) =>
+    getDocumentTimestamp(b) -
+    getDocumentTimestamp(a)
+);
     setCvList(rows);
     setSelectedId((currentId) => {
       if (rows.some((item) => item.id === currentId)) return currentId;
@@ -890,7 +980,7 @@ function RecentDocuments({
                     {data.jobTitle || "Posisi belum diisi"}
                   </p>
                   <p className="mt-2 text-xs text-slate-400">
-                    Diperbarui {formatDate(cv.updated_at || cv.created_at)}
+                    Diperbarui {formatDate(getDocumentDate(cv))}
                   </p>
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -1161,7 +1251,7 @@ function DocumentsView({
                 </div>
 
                 <p className="mt-3 text-xs text-slate-400">
-                  Diperbarui {formatDate(cv.updated_at || cv.created_at)}
+                  Diperbarui {formatDate(getDocumentDate(cv))}
                 </p>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
