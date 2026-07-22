@@ -1029,11 +1029,32 @@ const pdf = new jsPDF({
   compress: true,
 });
 
-    const pageWidth = 210;
+        const pageWidth = 210;
     const pageHeight = 297;
-    const imageWidth = pageWidth;
-    const imageHeight =
-      (canvas.height * imageWidth) / canvas.width;
+
+    const rawImageWidth = pageWidth;
+    const rawImageHeight =
+      (canvas.height * rawImageWidth) / canvas.width;
+
+    // Toleransi untuk selisih kecil akibat pembulatan html2canvas.
+    // CV yang hanya sedikit lebih tinggi dari A4 tetap menjadi satu halaman.
+    const singlePageTolerance = 5;
+    const hasTinyOverflow =
+      rawImageHeight > pageHeight &&
+      rawImageHeight <= pageHeight + singlePageTolerance;
+
+    const imageHeight = hasTinyOverflow
+      ? pageHeight
+      : rawImageHeight;
+
+    const imageWidth = hasTinyOverflow
+      ? rawImageWidth * (pageHeight / rawImageHeight)
+      : rawImageWidth;
+
+    const imageX = Math.max(
+      0,
+      (pageWidth - imageWidth) / 2
+    );
 
     let heightLeft = imageHeight;
     let position = 0;
@@ -1041,7 +1062,7 @@ const pdf = new jsPDF({
     pdf.addImage(
       imageData,
       "JPEG",
-      0,
+      imageX,
       position,
       imageWidth,
       imageHeight,
@@ -1051,14 +1072,14 @@ const pdf = new jsPDF({
 
     heightLeft -= pageHeight;
 
-    while (heightLeft > 0.5) {
-      position = heightLeft - imageHeight;
+    while (heightLeft > 1) {
+      position -= pageHeight;
       pdf.addPage();
 
       pdf.addImage(
         imageData,
         "JPEG",
-        0,
+        imageX,
         position,
         imageWidth,
         imageHeight,
