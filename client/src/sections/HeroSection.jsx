@@ -1,7 +1,10 @@
+import HeroSocialProof from "../components/HeroSocialProof";
+
 export default function HeroSection({
+  user = null,
   onStart = () => {},
   onTemplates,
-  onLogin,
+  onLogin = () => {},
 }) {
   const handleTemplates = onTemplates || onStart;
 
@@ -53,6 +56,11 @@ export default function HeroSection({
               <ArrowRightIcon className="h-5 w-5" />
             </button>
           </div>
+
+           <HeroSocialProof
+  user={user}
+  onLogin={onLogin}
+/>
 
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-slate-600">
             <FeatureCheck text="Tanpa kemampuan desain" />
@@ -179,7 +187,7 @@ export default function HeroSection({
                 <CvSection title="Pengalaman Kerja">
                   <TimelineItem
                     title="Warehouse Manager"
-                    company="PT Agres Info Teknologi"
+                    company="PT Bersama-sama Maju"
                     period="2024 — Sekarang"
                     bullets={[
                       "Mengelola operasional warehouse dan pencapaian KPI tim.",
@@ -207,7 +215,7 @@ export default function HeroSection({
                       S1 Manajemen
                     </p>
                     <p className="mt-1 text-[10px] text-slate-600">
-                      Universitas Indonesia
+                      Universitas .....
                     </p>
                     <p className="mt-1 text-[9px] font-semibold text-slate-600">
                       2014 — 2018

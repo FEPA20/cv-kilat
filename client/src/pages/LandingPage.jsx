@@ -1,5 +1,6 @@
 import Header from "../components/Header";
 import HeroSection from "../sections/HeroSection";
+import UserReviewsSection from "../components/UserReviewsSection";
 
 export default function LandingPage({
   user,
@@ -80,9 +81,10 @@ export default function LandingPage({
       HERO
   ===================================================== */}
   <HeroSection
-        onStart={onStart}
-        onLogin={onLogin}
-      />
+  user={user}
+  onStart={onStart}
+  onLogin={onLogin}
+/>
 
       {/* =====================================================
           ADVANTAGES
@@ -260,6 +262,11 @@ export default function LandingPage({
           </div>
         </div>
       </section>
+      {/* =====================================================
+          USER REVIEWS
+      ===================================================== */}
+      <UserReviewsSection />
+
 
       {/* =====================================================
           FINAL CTA
