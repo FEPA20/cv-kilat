@@ -281,16 +281,46 @@ function SkillBars({ level, color }) {
 }
 
 function PhotoAvatar({ photo, fallbackName }) {
-  const src = photo.editedUrl || photo.originalUrl;
+  const size = Number(photo?.size) || 96;
+  const zoom = Number(photo?.zoom) || 1;
+  const rotation = Number(photo?.rotation) || 0;
+  const shape = photo?.shape || "circle";
+
+  const src =
+    photo?.editedUrl ||
+    photo?.originalUrl ||
+    "";
+
+  const borderRadius =
+    shape === "circle"
+      ? "999px"
+      : shape === "rounded"
+        ? "18px"
+        : "4px";
+
+  const frameStyle = {
+    width: `${size}px`,
+    height: `${size}px`,
+    minWidth: `${size}px`,
+    minHeight: `${size}px`,
+    maxWidth: `${size}px`,
+    maxHeight: `${size}px`,
+    borderRadius,
+    overflow: "hidden",
+    position: "relative",
+    flexShrink: 0,
+    contain: "paint",
+    clipPath: `inset(0 round ${borderRadius})`,
+    WebkitClipPath: `inset(0 round ${borderRadius})`,
+  };
+
   if (!src) {
     return (
       <div
+        data-photo-frame="true"
         className="flex shrink-0 items-center justify-center bg-white/30 font-bold text-white"
-        style={{
-          width: photo.size,
-          height: photo.size,
-          borderRadius: photo.shape === "circle" ? "999px" : photo.shape === "rounded" ? "18px" : "4px",
-        }}
+        style={frameStyle}
+        aria-label="Foto profil belum tersedia"
       >
         {fallbackName || "CV"}
       </div>
@@ -299,18 +329,30 @@ function PhotoAvatar({ photo, fallbackName }) {
 
   return (
     <div
-      className="shrink-0 overflow-hidden bg-slate-100"
-      style={{
-        width: photo.size,
-        height: photo.size,
-        borderRadius: photo.shape === "circle" ? "999px" : photo.shape === "rounded" ? "18px" : "4px",
-      }}
+      data-photo-frame="true"
+      className="shrink-0 bg-slate-100"
+      style={frameStyle}
     >
       <img
+        data-photo-image="true"
         src={src}
         alt="Foto profil CV"
-        className="h-full w-full object-cover"
-        style={{ transform: `scale(${photo.zoom}) rotate(${photo.rotation}deg)` }}
+        draggable={false}
+        style={{
+          display: "block",
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          minWidth: "100%",
+          minHeight: "100%",
+          maxWidth: "none",
+          maxHeight: "none",
+          objectFit: "cover",
+          objectPosition: "center",
+          transformOrigin: "center center",
+          transform: `scale(${zoom}) rotate(${rotation}deg)`,
+        }}
       />
     </div>
   );
@@ -1020,74 +1062,397 @@ const downloadPDF = async () => {
       );
     }
 
-    const { default: jsPDF } = await import("jspdf");
+        const { default: jsPDF } = await import("jspdf");
 
-const pdf = new jsPDF({
-  orientation: "portrait",
-  unit: "mm",
-  format: "a4",
-  compress: true,
-});
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
 
-        const pageWidth = 210;
+    const pageWidth = 210;
     const pageHeight = 297;
 
-    const rawImageWidth = pageWidth;
+    // Tinggi satu halaman A4 dalam ukuran pixel canvas.
+    const pagePixelHeight = Math.floor(
+      (canvas.width * pageHeight) / pageWidth
+    );
+
+    // Toleransi maksimal 5 mm untuk CV yang hanya sedikit melebihi A4.
+    const singlePageTolerancePx = Math.ceil(
+      (canvas.width * 5) / pageWidth
+    );
+
     const rawImageHeight =
-      (canvas.height * rawImageWidth) / canvas.width;
+      (canvas.height * pageWidth) /
+      canvas.width;
 
-    // Toleransi untuk selisih kecil akibat pembulatan html2canvas.
-    // CV yang hanya sedikit lebih tinggi dari A4 tetap menjadi satu halaman.
-    const singlePageTolerance = 5;
-    const hasTinyOverflow =
-      rawImageHeight > pageHeight &&
-      rawImageHeight <= pageHeight + singlePageTolerance;
+    /*
+     * CV satu halaman atau hanya sedikit melebihi A4:
+     * perkecil sedikit agar tidak membuat halaman kosong tambahan.
+     */
+    if (
+      canvas.height <=
+      pagePixelHeight + singlePageTolerancePx
+    ) {
+      const scaleToFit = Math.min(
+        1,
+        pageHeight / rawImageHeight
+      );
 
-    const imageHeight = hasTinyOverflow
-      ? pageHeight
-      : rawImageHeight;
+      const imageWidth =
+        pageWidth * scaleToFit;
 
-    const imageWidth = hasTinyOverflow
-      ? rawImageWidth * (pageHeight / rawImageHeight)
-      : rawImageWidth;
+      const imageHeight =
+        rawImageHeight * scaleToFit;
 
-    const imageX = Math.max(
-      0,
-      (pageWidth - imageWidth) / 2
-    );
-
-    let heightLeft = imageHeight;
-    let position = 0;
-
-    pdf.addImage(
-      imageData,
-      "JPEG",
-      imageX,
-      position,
-      imageWidth,
-      imageHeight,
-      undefined,
-      "FAST"
-    );
-
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 1) {
-      position -= pageHeight;
-      pdf.addPage();
+      const imageX =
+        (pageWidth - imageWidth) / 2;
 
       pdf.addImage(
         imageData,
         "JPEG",
         imageX,
-        position,
+        0,
         imageWidth,
         imageHeight,
         undefined,
         "FAST"
       );
+    } else {
+      /*
+       * CV beberapa halaman:
+       * cari baris kosong terdekat sebelum batas A4.
+       */
+      const sourceContext = canvas.getContext("2d", {
+        willReadFrequently: true,
+      });
 
-      heightLeft -= pageHeight;
+      if (!sourceContext) {
+        throw new Error(
+          "Browser tidak dapat membaca hasil CV untuk pembagian halaman."
+        );
+      }
+
+      const sourcePixels =
+        sourceContext.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        ).data;
+
+      const sampleStep = Math.max(
+        3,
+        Math.floor(canvas.width / 400)
+      );
+
+      /*
+       * Menghitung perubahan warna pada satu baris.
+       * Baris kosong biasanya memiliki sangat sedikit perubahan warna,
+       * sedangkan baris berisi teks memiliki banyak perubahan.
+       */
+      const isWhitespaceRow = (y) => {
+        if (y < 0 || y >= canvas.height) {
+          return false;
+        }
+
+        const startX = Math.floor(
+          canvas.width * 0.03
+        );
+
+        const endX = Math.floor(
+          canvas.width * 0.97
+        );
+
+        let previousIndex =
+          (y * canvas.width + startX) * 4;
+
+        let previousRed =
+          sourcePixels[previousIndex];
+
+        let previousGreen =
+          sourcePixels[previousIndex + 1];
+
+        let previousBlue =
+          sourcePixels[previousIndex + 2];
+
+        let transitions = 0;
+
+        const maximumTransitions = Math.max(
+          10,
+          Math.floor(canvas.width / 120)
+        );
+
+        for (
+          let x = startX + sampleStep;
+          x < endX;
+          x += sampleStep
+        ) {
+          const pixelIndex =
+            (y * canvas.width + x) * 4;
+
+          const red =
+            sourcePixels[pixelIndex];
+
+          const green =
+            sourcePixels[pixelIndex + 1];
+
+          const blue =
+            sourcePixels[pixelIndex + 2];
+
+          const colorDifference =
+            Math.abs(red - previousRed) +
+            Math.abs(green - previousGreen) +
+            Math.abs(blue - previousBlue);
+
+          if (colorDifference > 70) {
+            transitions += 1;
+          }
+
+          if (
+            transitions >
+            maximumTransitions
+          ) {
+            return false;
+          }
+
+          previousRed = red;
+          previousGreen = green;
+          previousBlue = blue;
+        }
+
+        return true;
+      };
+
+      /*
+       * Cari area kosong maksimal sekitar 22 mm
+       * sebelum batas halaman.
+       */
+      const findSmartBreak = (
+        pageStart,
+        idealPageEnd
+      ) => {
+        const lookbackPixels = Math.floor(
+          (canvas.width * 22) / pageWidth
+        );
+
+        const minimumPageEnd = Math.max(
+          pageStart +
+            Math.floor(pagePixelHeight * 0.72),
+          idealPageEnd - lookbackPixels
+        );
+
+        const bandRadius = 3;
+
+        for (
+          let y = idealPageEnd - bandRadius - 1;
+          y >= minimumPageEnd;
+          y -= 1
+        ) {
+          let blankBand = true;
+
+          for (
+            let offset = -bandRadius;
+            offset <= bandRadius;
+            offset += 1
+          ) {
+            if (!isWhitespaceRow(y + offset)) {
+              blankBand = false;
+              break;
+            }
+          }
+
+          if (blankBand) {
+            return y;
+          }
+        }
+
+        // Cadangan apabila tidak ditemukan area kosong.
+        return idealPageEnd;
+      };
+
+            /*
+       * Periksa apakah suatu potongan halaman benar-benar
+       * mempunyai teks atau elemen visual.
+       */
+      const sliceHasMeaningfulContent = (
+        startY,
+        endY
+      ) => {
+        const sliceHeight = Math.max(
+          0,
+          endY - startY
+        );
+
+        if (sliceHeight <= 0) {
+          return false;
+        }
+
+        const rowStep = Math.max(
+          1,
+          Math.floor(sliceHeight / 240)
+        );
+
+        let contentRows = 0;
+
+        for (
+          let y = startY;
+          y < endY;
+          y += rowStep
+        ) {
+          if (!isWhitespaceRow(y)) {
+            contentRows += 1;
+
+            // Beberapa baris berisi sudah cukup membuktikan ada konten.
+            if (contentRows >= 3) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      };
+
+      /*
+       * Cari posisi konten terakhir dan buang ruang kosong
+       * berlebihan di bagian bawah canvas.
+       */
+      let contentBottom = canvas.height;
+
+      const bottomPaddingPixels = Math.ceil(
+        (canvas.width * 4) / pageWidth
+      );
+
+      for (
+        let y = canvas.height - 1;
+        y >= 0;
+        y -= 1
+      ) {
+        if (!isWhitespaceRow(y)) {
+          contentBottom = Math.min(
+            canvas.height,
+            y + bottomPaddingPixels
+          );
+          break;
+        }
+      }
+
+      let pageStart = 0;
+      let pageIndex = 0;
+
+      while (pageStart < contentBottom) {
+        const idealPageEnd = Math.min(
+          pageStart + pagePixelHeight,
+          contentBottom
+        );
+
+        const pageEnd =
+          idealPageEnd < contentBottom
+            ? findSmartBreak(
+                pageStart,
+                idealPageEnd
+              )
+            : contentBottom;
+
+        const safePageEnd =
+          pageEnd > pageStart + 20
+            ? pageEnd
+            : idealPageEnd;
+
+        /*
+         * Jangan membuat halaman apabila bagian terakhir
+         * hanya berisi ruang kosong.
+         */
+        if (
+          !sliceHasMeaningfulContent(
+            pageStart,
+            safePageEnd
+          )
+        ) {
+          if (safePageEnd >= contentBottom) {
+            break;
+          }
+
+          pageStart = safePageEnd;
+          continue;
+        }
+
+        const sliceHeight =
+          safePageEnd - pageStart;
+
+        const pageCanvas =
+          document.createElement("canvas");
+
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeight;
+
+        const pageContext =
+          pageCanvas.getContext("2d", {
+            alpha: false,
+          });
+
+        if (!pageContext) {
+          throw new Error(
+            "Browser tidak dapat membuat halaman PDF."
+          );
+        }
+
+        pageContext.fillStyle =
+          data.design.pageBackground ||
+          "#ffffff";
+
+        pageContext.fillRect(
+          0,
+          0,
+          pageCanvas.width,
+          pageCanvas.height
+        );
+
+        pageContext.drawImage(
+          canvas,
+          0,
+          pageStart,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight
+        );
+
+        const pageImageData =
+          pageCanvas.toDataURL(
+            "image/jpeg",
+            0.96
+          );
+
+        const pageImageHeight =
+          (sliceHeight * pageWidth) /
+          canvas.width;
+
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(
+          pageImageData,
+          "JPEG",
+          0,
+          0,
+          pageWidth,
+          Math.min(
+            pageHeight,
+            pageImageHeight
+          ),
+          undefined,
+          "FAST"
+        );
+
+        pageStart = safePageEnd;
+        pageIndex += 1;
+      }
     }
 
     const safeFilename = (
@@ -1258,32 +1623,35 @@ const capturePhoto = () => {
     !video.videoWidth ||
     !video.videoHeight
   ) {
+    setPhotoNotice({
+      type: "error",
+      text: "Kamera belum siap. Silakan tunggu sebentar.",
+    });
     return;
   }
 
-  const maxDimension = 1600;
-  const longestSide = Math.max(
+  // Ambil area persegi dari bagian tengah frame kamera.
+  const sourceSize = Math.min(
     video.videoWidth,
     video.videoHeight
   );
 
-  const scale = Math.min(
+  const sourceX =
+    (video.videoWidth - sourceSize) / 2;
+
+  const sourceY =
+    (video.videoHeight - sourceSize) / 2;
+
+  // Batasi resolusi agar foto tetap tajam tetapi tidak terlalu besar.
+  const outputSize = Math.max(
     1,
-    maxDimension / longestSide
+    Math.round(Math.min(1200, sourceSize))
   );
 
-  const canvas =
-    document.createElement("canvas");
+  const canvas = document.createElement("canvas");
 
-  canvas.width = Math.max(
-    1,
-    Math.round(video.videoWidth * scale)
-  );
-
-  canvas.height = Math.max(
-    1,
-    Math.round(video.videoHeight * scale)
-  );
+  canvas.width = outputSize;
+  canvas.height = outputSize;
 
   const context = canvas.getContext("2d", {
     alpha: false,
@@ -1292,8 +1660,7 @@ const capturePhoto = () => {
   if (!context) {
     setPhotoNotice({
       type: "error",
-      text:
-        "Browser tidak dapat mengambil foto.",
+      text: "Browser tidak dapat mengambil foto.",
     });
     return;
   }
@@ -1302,22 +1669,37 @@ const capturePhoto = () => {
   context.fillRect(
     0,
     0,
-    canvas.width,
-    canvas.height
+    outputSize,
+    outputSize
   );
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
 
   context.drawImage(
     video,
+    sourceX,
+    sourceY,
+    sourceSize,
+    sourceSize,
     0,
     0,
-    canvas.width,
-    canvas.height
+    outputSize,
+    outputSize
   );
 
   const photoUrl = canvas.toDataURL(
     "image/jpeg",
-    0.88
+    0.9
   );
+
+  if (!photoUrl || photoUrl === "data:,") {
+    setPhotoNotice({
+      type: "error",
+      text: "Foto gagal dibuat dari kamera.",
+    });
+    return;
+  }
 
   setData((current) => ({
     ...current,
@@ -1325,13 +1707,16 @@ const capturePhoto = () => {
       ...current.photo,
       originalUrl: photoUrl,
       editedUrl: "",
+      zoom: 1,
+      rotation: 0,
     },
   }));
 
+  setPhotoProcessingMode("");
+
   setPhotoNotice({
     type: "success",
-    text:
-      "Foto kamera siap. Pilih background putih atau biru.",
+    text: "Foto kamera berhasil diambil dan dipotong menjadi foto profil.",
   });
 
   closeCamera();
@@ -1827,7 +2212,13 @@ const spellIssues = useMemo(() => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-5 backdrop-blur-sm">
           <div className="w-full max-w-2xl rounded-3xl bg-white p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-bold text-slate-900">Ambil Foto</h2><p className="mt-1 text-sm text-slate-500">Posisikan wajah di tengah kamera.</p></div><button type="button" onClick={closeCamera} className="rounded-xl p-3 text-slate-500 hover:bg-slate-100">✕</button></div>
-            {cameraError ? <div className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{cameraError}</div> : <video ref={videoRef} autoPlay playsInline muted className="aspect-video w-full rounded-2xl bg-slate-900 object-cover" />}
+            {cameraError ? <div className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{cameraError}</div> : <video
+  ref={videoRef}
+  autoPlay
+  playsInline
+  muted
+  className="mx-auto aspect-square w-full max-w-xl rounded-2xl bg-slate-900 object-cover"
+/>}
             <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={closeCamera} className="rounded-xl border border-slate-200 px-5 py-3 font-semibold text-slate-600">Batal</button><button type="button" disabled={Boolean(cameraError)} onClick={capturePhoto} className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-white disabled:opacity-40">📸 Ambil Foto</button></div>
           </div>
         </div>
