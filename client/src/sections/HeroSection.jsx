@@ -108,7 +108,7 @@ export default function HeroSection({
                     <div className="mt-4 space-y-3 text-[10px] leading-4 text-slate-300">
                       <ContactLine
                         icon={<MailIcon className="h-3.5 w-3.5" />}
-                        text="febby@email.com"
+                        text="rizky@email.com"
                       />
                       <ContactLine
                         icon={<PhoneIcon className="h-3.5 w-3.5" />}
@@ -159,7 +159,7 @@ export default function HeroSection({
                       </p>
 
                       <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-[38px]">
-                        Febby Pahlawan
+                        Rizky Saputra
                       </h2>
 
                       <p className="mt-1 text-sm font-extrabold text-[#9a6700]">

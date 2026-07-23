@@ -5,6 +5,7 @@ export default function Header({
   onLogin,
   onStart,
   onLogout,
+  onPricing,
 }) {
   return (
     <header
@@ -44,8 +45,29 @@ export default function Header({
         </button>
 
         {/* ACTIONS */}
-        <div className="flex items-center gap-3">
-          {user ? (
+<div className="flex items-center gap-3">
+  <button
+    type="button"
+    onClick={onPricing}
+    className="
+      rounded-full
+      px-4
+      py-2.5
+      text-sm
+      font-semibold
+      text-slate-200
+      transition
+      hover:bg-white/10
+      hover:text-amber-300
+      focus:outline-none
+      focus-visible:ring-2
+      focus-visible:ring-amber-400
+    "
+  >
+    Harga
+  </button>
+
+  {user ? (
             <>
               <button
                 type="button"

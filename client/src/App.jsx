@@ -11,6 +11,7 @@ const TemplateEditorPage = lazy(() =>
   import("./pages/TemplateEditorPage")
 );
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 const CoverLetterPage = lazy(() =>
   import("./pages/CoverLetterPage")
 );
@@ -386,6 +387,12 @@ export default function App() {
       return;
     }
 
+    if (pendingAfterLogin === "pricing") {
+  setPage("pricing");
+  setPendingAfterLogin(null);
+  return;
+}
+
     setPendingAfterLogin(null);
 
     if (page === "landing") {
@@ -528,6 +535,32 @@ export default function App() {
   }
 
   // ======================================================
+// PRICING PAGE
+// ======================================================
+if (page === "pricing") {
+  return (
+    <>
+      <PricingPage
+        user={user}
+        onBack={() => setPage("landing")}
+        onChoosePlan={(plan) => {
+          if (!user) {
+            openLogin("pricing");
+            return;
+          }
+
+          window.alert(
+            `Paket ${plan.name} dipilih. Sistem pembayaran akan diaktifkan pada tahap berikutnya.`
+          );
+        }}
+      />
+
+      {authOverlays}
+    </>
+  );
+}
+
+  // ======================================================
   // TEMPLATE GALLERY
   // ======================================================
   if (page === "templates") {
@@ -639,6 +672,7 @@ export default function App() {
             onLogin={() => openLogin("dashboard")}
             onLogout={handleLogout}
             onOpenLegal={openLegal}
+            onPricing={() => setPage("pricing")}
           />
 
           {authOverlays}
@@ -672,6 +706,7 @@ export default function App() {
             onLogin={() => openLogin("dashboard")}
             onLogout={handleLogout}
             onOpenLegal={openLegal}
+            onPricing={() => setPage("pricing")}
           />
 
           {authOverlays}
@@ -707,6 +742,7 @@ export default function App() {
             onLogin={() => openLogin("dashboard")}
             onLogout={handleLogout}
             onOpenLegal={openLegal}
+            onPricing={() => setPage("pricing")}
           />
 
           {authOverlays}
@@ -759,6 +795,7 @@ export default function App() {
         }}
         onLogout={handleLogout}
         onOpenLegal={openLegal}
+        onPricing={() => setPage("pricing")}
       />
 
       {authOverlays}

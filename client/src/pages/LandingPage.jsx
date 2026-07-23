@@ -7,6 +7,7 @@ export default function LandingPage({
   onStart,
   onLogin,
   onLogout,
+  onPricing,
 }) {
   const advantages = [
     {
@@ -74,6 +75,7 @@ export default function LandingPage({
   onStart={onStart}
   onLogin={onLogin}
   onLogout={onLogout}
+  onPricing={onPricing}
 />
 
 <main id="main-content">
