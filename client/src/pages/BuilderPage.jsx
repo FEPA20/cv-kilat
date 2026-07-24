@@ -1,6 +1,11 @@
 // BuilderPage Smart Skill Level V1 — compact score badges without collisions
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProfessionalCVPreview from "../components/ProfessionalCVPreview";
+import ReferenceTemplatePreview, {
+  REFERENCE_EDITOR_TEMPLATES,
+  isReferenceTemplate,
+} from "../components/templates/ReferenceTemplatePreview";
+// CK-TPL-03 — preserve selected reference template inside Builder
 import { applyTextFormatting } from "../utils/textFormatting";
 
 const STEPS = [
@@ -496,19 +501,19 @@ const [template, setTemplate] = useState("modern");
     const payload = {
       ...form,
       design: {
-        ...(editData?.data?.design || {}),
+        ...((editData?.data || editData)?.design || {}),
         template,
         language,
-        fontFamily: editData?.data?.design?.fontFamily || "Inter",
-        fontSize: editData?.data?.design?.fontSize || "normal",
-        primaryColor: editData?.data?.design?.primaryColor || "#0ea5e9",
-        headerBackground: editData?.data?.design?.headerBackground || "#e8f3fb",
-        pageBackground: editData?.data?.design?.pageBackground || "#ffffff",
-        sectionSpacing: editData?.data?.design?.sectionSpacing || 22,
-        paragraphSpacing: editData?.data?.design?.paragraphSpacing || 8,
-        lineHeight: editData?.data?.design?.lineHeight || 1.5,
-        pageMargin: editData?.data?.design?.pageMargin || 38,
-        sectionOrder: editData?.data?.design?.sectionOrder || [
+        fontFamily: (editData?.data || editData)?.design?.fontFamily || "Inter",
+        fontSize: (editData?.data || editData)?.design?.fontSize || "normal",
+        primaryColor: (editData?.data || editData)?.design?.primaryColor || "#0ea5e9",
+        headerBackground: (editData?.data || editData)?.design?.headerBackground || "#e8f3fb",
+        pageBackground: (editData?.data || editData)?.design?.pageBackground || "#ffffff",
+        sectionSpacing: (editData?.data || editData)?.design?.sectionSpacing || 22,
+        paragraphSpacing: (editData?.data || editData)?.design?.paragraphSpacing || 8,
+        lineHeight: (editData?.data || editData)?.design?.lineHeight || 1.5,
+        pageMargin: (editData?.data || editData)?.design?.pageMargin || 38,
+        sectionOrder: (editData?.data || editData)?.design?.sectionOrder || [
           "summary",
           "experience",
           "education",
@@ -517,9 +522,9 @@ const [template, setTemplate] = useState("modern");
           "certifications",
           "hobbies",
         ],
-        hiddenSections: editData?.data?.design?.hiddenSections || [],
+        hiddenSections: (editData?.data || editData)?.design?.hiddenSections || [],
       },
-      photo: editData?.data?.photo || {
+      photo: (editData?.data || editData)?.photo || {
         originalUrl: "",
         editedUrl: "",
         shape: "circle",
@@ -726,7 +731,11 @@ const [template, setTemplate] = useState("modern");
           <div className="mx-auto min-w-0 max-w-[1240px]">
             <div className="mb-4 grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3 lg:mb-5">
               <div className="col-span-2 min-w-0 rounded-xl bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm sm:col-span-1 sm:px-4"><span className={`mr-2 rounded-lg px-2 py-1 font-bold ${score >= 80 ? "bg-emerald-100 text-emerald-700" : score >= 50 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>{score}%</span>Skor resume Anda</div>
-              <select value={template} onChange={(e) => setTemplate(e.target.value)} className="block w-full min-w-0 rounded-xl border-0 bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none sm:w-auto sm:px-4"><option value="modern">Template Modern</option><option value="ats">Template ATS</option><option value="simple">Template Simple</option></select>
+              <select value={template} onChange={(e) => setTemplate(e.target.value)} className="block w-full min-w-0 rounded-xl border-0 bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none sm:w-auto sm:px-4"><option value="modern">Template Modern</option><option value="ats">Template ATS</option><option value="simple">Template Simple</option>{REFERENCE_EDITOR_TEMPLATES.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}</select>
               <select value={language} onChange={(e) => setLanguage(e.target.value)} className="block w-full min-w-0 rounded-xl border-0 bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none sm:w-auto sm:px-4"><option value="ID">Indonesia</option><option value="EN">English</option></select>
               <span className="col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-xs font-bold text-slate-600 shadow-sm sm:col-span-1">
                 Preview besar • Tajam
@@ -735,15 +744,36 @@ const [template, setTemplate] = useState("modern");
 
             <ProfessionalCVPreview
               refreshKey={form}
-              sourceWidth={720}
+              sourceWidth={isReferenceTemplate(template) ? 794 : 720}
               viewportHeight={mobileView === "preview" ? 620 : 820}
               minZoom={0.5}
               maxZoom={1.25}
               defaultZoom={1}
               defaultMode={mobileView === "preview" ? "fit-width" : "actual-size"}
             >
+              {/* CK-TPL-03: galeri, Builder, Editor, dan PDF memakai renderer yang sama. */}
+              {isReferenceTemplate(template) ? (
+                <ReferenceTemplatePreview
+                  data={{
+                    ...form,
+                    design: {
+                      ...(((editData?.data || editData)?.design) || {}),
+                      ...(form.design || {}),
+                      template,
+                      language,
+                    },
+                    photo: {
+                      ...(((editData?.data || editData)?.photo) || {}),
+                      ...(form.photo || {}),
+                    },
+                  }}
+                />
+              ) : null}
+
               <div
-                className={`relative min-h-[940px] w-[720px] overflow-hidden bg-white p-10 text-slate-800 ${paperClass}`}
+                className={`${
+                  isReferenceTemplate(template) ? "hidden" : ""
+                } relative min-h-[940px] w-[720px] overflow-hidden bg-white p-10 text-slate-800 ${paperClass}`}
               >
               <header className={template === "ats" ? "border-b border-slate-300 pb-5 text-center" : template === "simple" ? "border-b-2 border-slate-900 pb-5" : "border-b-4 border-sky-500 pb-5"}>
                 <h1 className={`text-3xl font-bold ${template === "modern" ? "text-sky-600" : "text-slate-900"}`}>{`${form.contact.firstName} ${form.contact.lastName}`.trim() || "Nama Anda"}</h1>

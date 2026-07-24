@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import LogoCVKilat from "../components/LogoCVKilat";
 import { CV_TEMPLATES } from "../data/cvTemplates";
+import {
+  ReferenceTemplateScaled,
+  isReferenceTemplate,
+} from "../components/templates/ReferenceTemplatePreview";
 
 const CATEGORIES = [
   "Semua",
@@ -437,6 +441,27 @@ function TemplateCard({ template, onPreview, onUse }) {
 
 function CvThumbnail({ template, large = false }) {
   const data = template.sampleData;
+
+  // CK-TPL-02: template referensi menggunakan layout A4 yang sama
+  // pada galeri, modal preview, editor, dan PDF.
+  if (isReferenceTemplate(template.design.template)) {
+    return (
+      <ReferenceTemplateScaled
+        data={{
+          ...data,
+          design: {
+            ...template.design,
+          },
+          photo: {
+            ...(data?.photo || {}),
+          },
+        }}
+        className={`shadow-[0_18px_45px_rgba(15,23,42,0.18)] ${
+          large ? "rounded-lg" : "rounded-md"
+        }`}
+      />
+    );
+  }
   const fullName = `${data.contact.firstName} ${data.contact.lastName}`;
   const primaryColor = template.design.primaryColor;
   const isAts = template.design.template === "ats";

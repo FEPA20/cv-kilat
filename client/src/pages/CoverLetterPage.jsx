@@ -2,6 +2,8 @@ import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas-pro";
 import { supabase } from "../lib/supabase";
 import LogoCVKilat from "../components/LogoCVKilat";
+import PaymentPackageModal from "../components/payment/PaymentPackageModal";
+import { loadMidtransSnap } from "../lib/midtrans";
 
 const EMPTY_CV = {
   firstName: "",
@@ -129,6 +131,10 @@ export default function CoverLetterPage({
   const [downloading, setDownloading] = useState(false);
   const [notice, setNotice] = useState("");
   const [activePanel, setActivePanel] = useState("vacancy");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [pendingLetterId, setPendingLetterId] = useState(null);
 
   const selectedCv = useMemo(() => {
     if (initialCv && (!selectedCvId || selectedCvId === initialCv.id)) return initialCv;
@@ -137,6 +143,13 @@ export default function CoverLetterPage({
 
   const cvData = useMemo(() => normalizeCv(selectedCv), [selectedCv]);
   const fullName = useMemo(() => getFullName(cvData), [cvData]);
+
+  useEffect(() => {
+    // CK-PAY-CL-02: Preload modul PDF agar unduhan pertama lebih cepat.
+    void import("jspdf").catch((error) => {
+      console.warn("Preload jsPDF gagal:", error);
+    });
+  }, []);
 
   useEffect(() => {
     try {
@@ -289,43 +302,199 @@ export default function CoverLetterPage({
     return response.data;
   };
 
-  const downloadPdf = async () => {
-    const validation = validate();
-    if (validation) {
-      setNotice(validation);
-      return;
+  const getFunctionErrorMessage = async (
+    error,
+    fallback = "Terjadi kesalahan saat menghubungi server.",
+  ) => {
+    try {
+      const payload = await error?.context?.json?.();
+      if (payload?.error) return payload.error;
+    } catch {
+      // Gunakan pesan umum di bawah.
     }
 
-    setDownloading(true);
-    setNotice("");
+    return error?.message || fallback;
+  };
+
+  const checkLetterAccess = async (targetLetterId) => {
+    const { data, error } = await supabase.functions.invoke(
+      "check-cover-letter-access",
+      {
+        body: { letter_id: targetLetterId },
+      },
+    );
+
+    if (error) {
+      throw new Error(
+        await getFunctionErrorMessage(
+          error,
+          "Akses surat lamaran belum dapat diperiksa.",
+        ),
+      );
+    }
+
+    return data || { can_download: false };
+  };
+
+  const consumeLetterAccess = async (targetLetterId) => {
+    const safeCompany = (letter.companyName || "Perusahaan")
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-|-$/g, "");
+
+    const { data, error } = await supabase.functions.invoke(
+      "consume-cover-letter-access",
+      {
+        body: {
+          letter_id: targetLetterId,
+          document_name: `Surat-Lamaran-${fullName}-${safeCompany}`,
+        },
+      },
+    );
+
+    if (error) {
+      throw new Error(
+        await getFunctionErrorMessage(
+          error,
+          "Akses unduh surat lamaran belum tersedia.",
+        ),
+      );
+    }
+
+    return data || { can_download: false };
+  };
+
+  const waitForLetterAccess = async (
+    targetLetterId,
+    attempts = 20,
+  ) => {
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const access = await checkLetterAccess(targetLetterId);
+
+      if (access?.can_download) return access;
+
+      setPaymentMessage(
+        `Pembayaran diterima. Menunggu verifikasi server (${attempt}/${attempts})...`,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    throw new Error(
+      "Pembayaran belum terverifikasi. Tekan “Saya sudah bayar · Cek akses” beberapa saat lagi.",
+    );
+  };
+
+  const createLetterPdf = async () => {
+    const previewElement = letterRef.current;
+
+    if (!previewElement) {
+      throw new Error(
+        "Preview surat lamaran belum siap. Silakan tunggu sebentar.",
+      );
+    }
+
+    const watermarkElements = Array.from(
+      previewElement.querySelectorAll(
+        '[data-cover-letter-watermark="true"]',
+      ),
+    );
+
+    const previousVisibility = watermarkElements.map(
+      (element) => element.style.visibility,
+    );
 
     try {
-      if (user) await saveLetter();
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      watermarkElements.forEach((element) => {
+        element.style.visibility = "hidden";
+      });
+
+      await new Promise((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(resolve),
+        ),
+      );
 
       const { default: jsPDF } = await import("jspdf");
 
-      const canvas = await html2canvas(letterRef.current, {
-        scale: 2,
+      const canvas = await html2canvas(previewElement, {
+        scale: 1.5,
         backgroundColor: "#ffffff",
         useCORS: true,
+        allowTaint: false,
+        logging: false,
+        ignoreElements: (element) =>
+          element?.hasAttribute?.(
+            "data-cover-letter-watermark",
+          ),
       });
+
       const image = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
+      const pdf = new jsPDF({
+        orientation: "p",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
       const pageWidth = 210;
       const pageHeight = 297;
-      const imageHeight = (canvas.height * pageWidth) / canvas.width;
+      const imageHeight =
+        (canvas.height * pageWidth) / canvas.width;
 
-      if (imageHeight <= pageHeight) {
-        pdf.addImage(image, "PNG", 0, 0, pageWidth, imageHeight);
+      /*
+       * CK-PAY-CL-02
+       * Beri toleransi 1 mm untuk selisih pembulatan rasio A4.
+       * Dokumen normal selalu menjadi tepat satu halaman.
+       */
+      const singlePageTolerance = 1;
+
+      if (imageHeight <= pageHeight + singlePageTolerance) {
+        pdf.addImage(
+          image,
+          "PNG",
+          0,
+          0,
+          pageWidth,
+          pageHeight,
+          undefined,
+          "FAST",
+        );
       } else {
         let remainingHeight = imageHeight;
         let position = 0;
-        pdf.addImage(image, "PNG", 0, position, pageWidth, imageHeight);
+
+        pdf.addImage(
+          image,
+          "PNG",
+          0,
+          position,
+          pageWidth,
+          imageHeight,
+          undefined,
+          "FAST",
+        );
+
         remainingHeight -= pageHeight;
-        while (remainingHeight > 0) {
+
+        while (remainingHeight > 0.5) {
           position -= pageHeight;
           pdf.addPage();
-          pdf.addImage(image, "PNG", 0, position, pageWidth, imageHeight);
+
+          pdf.addImage(
+            image,
+            "PNG",
+            0,
+            position,
+            pageWidth,
+            imageHeight,
+            undefined,
+            "FAST",
+          );
+
           remainingHeight -= pageHeight;
         }
       }
@@ -333,13 +502,277 @@ export default function CoverLetterPage({
       const safeCompany = (letter.companyName || "Perusahaan")
         .replace(/[^a-z0-9]+/gi, "-")
         .replace(/^-|-$/g, "");
-      pdf.save(`Surat-Lamaran-${fullName.replace(/\s+/g, "-")}-${safeCompany}.pdf`);
+
+      pdf.save(
+        `Surat-Lamaran-${fullName.replace(/\s+/g, "-")}-${safeCompany}.pdf`,
+      );
+
       setNotice("PDF surat lamaran berhasil diunduh.");
+    } finally {
+      watermarkElements.forEach((element, index) => {
+        element.style.visibility =
+          previousVisibility[index] || "";
+      });
+    }
+  };
+
+  const downloadLetterWithAccess = async (targetLetterId) => {
+    setDownloading(true);
+    setNotice("");
+
+    try {
+      const access = await consumeLetterAccess(targetLetterId);
+
+      if (!access?.can_download) {
+        setPendingLetterId(targetLetterId);
+        setPaymentMessage(
+          "Paket aktif atau kredit surat lamaran diperlukan untuk mengunduh PDF bersih.",
+        );
+        setPaymentOpen(true);
+        return false;
+      }
+
+      setNotice(
+        access?.source === "existing_unlock"
+          ? "Akses surat ini masih aktif. Menyiapkan PDF..."
+          : "Paket aktif ditemukan. Menyiapkan PDF...",
+      );
+
+      await createLetterPdf();
+      setPaymentOpen(false);
+      setPaymentMessage("");
+      return true;
     } catch (error) {
-      console.error("Gagal membuat PDF:", error);
-      setNotice("PDF gagal dibuat. Silakan coba kembali.");
+      console.error(
+        "Gagal memproses akses surat lamaran:",
+        error,
+      );
+
+      setPendingLetterId(targetLetterId);
+      setPaymentMessage(
+        error?.message ||
+          "Akses surat lamaran belum tersedia.",
+      );
+      setPaymentOpen(true);
+      return false;
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const requestDownload = async () => {
+    const validation = validate();
+
+    if (validation) {
+      setNotice(validation);
+      return;
+    }
+
+    if (!user) {
+      setNotice(
+        "Silakan login sebelum mengunduh surat lamaran.",
+      );
+      return;
+    }
+
+    setDownloading(true);
+    setNotice("");
+
+    try {
+      const savedLetter = await saveLetter();
+
+      if (!savedLetter?.id) {
+        throw new Error(
+          "Surat lamaran harus berhasil disimpan sebelum diunduh.",
+        );
+      }
+
+      setPendingLetterId(savedLetter.id);
+
+      const access = await checkLetterAccess(savedLetter.id);
+
+      if (!access?.can_download) {
+        setPaymentMessage(
+          "Pilih paket untuk membuka PDF surat lamaran tanpa watermark.",
+        );
+        setPaymentOpen(true);
+        return;
+      }
+
+      await downloadLetterWithAccess(savedLetter.id);
+    } catch (error) {
+      console.error(
+        "Gagal memulai unduhan surat lamaran:",
+        error,
+      );
+
+      setNotice(
+        error?.message ||
+          "Surat lamaran belum dapat diunduh.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const startLetterPayment = async (planCode) => {
+    if (!user) {
+      setPaymentMessage(
+        "Silakan login sebelum melakukan pembayaran.",
+      );
+      return;
+    }
+
+    setPaymentBusy(true);
+    setPaymentMessage("Menyiapkan pembayaran Midtrans...");
+
+    try {
+      let targetLetterId = pendingLetterId;
+
+      if (!targetLetterId) {
+        const savedLetter = await saveLetter();
+        targetLetterId = savedLetter?.id || null;
+        setPendingLetterId(targetLetterId);
+      }
+
+      if (!targetLetterId) {
+        throw new Error(
+          "Surat lamaran belum berhasil disimpan.",
+        );
+      }
+
+      const { data: transaction, error } =
+        await supabase.functions.invoke("create-payment", {
+          body: {
+            plan_code: planCode,
+            cv_id: selectedCv?.id || null,
+          },
+        });
+
+      if (error) {
+        throw new Error(
+          await getFunctionErrorMessage(
+            error,
+            "Transaksi pembayaran gagal dibuat.",
+          ),
+        );
+      }
+
+      const snapToken =
+        transaction?.token ||
+        transaction?.snap_token ||
+        transaction?.snapToken;
+
+      if (!snapToken) {
+        throw new Error(
+          "Token transaksi Midtrans tidak tersedia.",
+        );
+      }
+
+      const snap = await loadMidtransSnap();
+
+      setPaymentMessage(
+        "Pilih metode pembayaran pada jendela Midtrans.",
+      );
+
+      snap.pay(snapToken, {
+        onSuccess: async () => {
+          setPaymentBusy(true);
+          setPaymentMessage(
+            "Pembayaran berhasil. Memverifikasi akses surat lamaran...",
+          );
+
+          try {
+            await waitForLetterAccess(targetLetterId);
+            setPaymentOpen(false);
+            setPaymentMessage("");
+            await downloadLetterWithAccess(targetLetterId);
+          } catch (verifyError) {
+            setPaymentMessage(
+              verifyError?.message ||
+                "Pembayaran belum terverifikasi.",
+            );
+          } finally {
+            setPaymentBusy(false);
+          }
+        },
+
+        onPending: () => {
+          setPaymentBusy(false);
+          setPaymentMessage(
+            "Pembayaran masih pending. Selesaikan pembayaran lalu tekan “Saya sudah bayar · Cek akses”.",
+          );
+        },
+
+        onError: (result) => {
+          console.error(
+            "Midtrans cover letter payment error:",
+            result,
+          );
+          setPaymentBusy(false);
+          setPaymentMessage(
+            "Pembayaran gagal atau layanan pembayaran sedang bermasalah.",
+          );
+        },
+
+        onClose: () => {
+          setPaymentBusy(false);
+          setPaymentMessage(
+            "Jendela pembayaran ditutup. Akses belum aktif apabila pembayaran belum selesai.",
+          );
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Gagal membuka pembayaran surat lamaran:",
+        error,
+      );
+
+      setPaymentBusy(false);
+      setPaymentMessage(
+        error?.message ||
+          "Gagal membuka pembayaran Midtrans.",
+      );
+    }
+  };
+
+  const handleCheckLetterAccess = async () => {
+    setPaymentBusy(true);
+
+    try {
+      let targetLetterId = pendingLetterId;
+
+      if (!targetLetterId) {
+        const savedLetter = await saveLetter();
+        targetLetterId = savedLetter?.id || null;
+        setPendingLetterId(targetLetterId);
+      }
+
+      if (!targetLetterId) {
+        throw new Error(
+          "Surat lamaran belum berhasil disimpan.",
+        );
+      }
+
+      const access = await checkLetterAccess(targetLetterId);
+
+      if (!access?.can_download) {
+        setPaymentMessage(
+          "Akses belum aktif. Pastikan pembayaran sudah selesai dan tunggu verifikasi webhook.",
+        );
+        return;
+      }
+
+      setPaymentOpen(false);
+      setPaymentMessage("");
+      await downloadLetterWithAccess(targetLetterId);
+    } catch (error) {
+      setPaymentMessage(
+        error?.message ||
+          "Akses belum dapat diverifikasi.",
+      );
+    } finally {
+      setPaymentBusy(false);
     }
   };
 
@@ -378,7 +811,7 @@ export default function CoverLetterPage({
             </button>
             <button
               type="button"
-              onClick={downloadPdf}
+              onClick={requestDownload}
               disabled={downloading}
               className="rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-sky-500/20 hover:bg-sky-600 disabled:opacity-50"
             >
@@ -688,6 +1121,23 @@ export default function CoverLetterPage({
           </section>
         </div>
       </main>
+
+      <PaymentPackageModal
+        open={paymentOpen}
+        busy={paymentBusy}
+        message={paymentMessage}
+        sandbox={
+          String(
+            import.meta.env.VITE_MIDTRANS_IS_PRODUCTION ||
+              "false",
+          ).toLowerCase() !== "true"
+        }
+        onClose={() => {
+          if (!paymentBusy) setPaymentOpen(false);
+        }}
+        onChoosePlan={startLetterPayment}
+        onCheckAccess={handleCheckLetterAccess}
+      />
     </div>
   );
 }
@@ -728,7 +1178,7 @@ const LetterPreview = forwardRef(function LetterPreview(
   return (
     <div
       ref={ref}
-      className="min-h-[1123px] w-[794px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
+      className="relative min-h-[1123px] w-[794px] overflow-hidden bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
       style={{
         fontFamily: letter.fontFamily,
         fontSize: fontSizes[letter.fontSize] || fontSizes.normal,
@@ -802,6 +1252,27 @@ const LetterPreview = forwardRef(function LetterPreview(
             {letter.signatureName || fullName}
           </p>
         </div>
+      </div>
+
+      <div
+        data-cover-letter-watermark="true"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-30 overflow-hidden"
+      >
+        {Array.from({ length: 11 }).map((_, index) => (
+          <span
+            key={index}
+            className="absolute whitespace-nowrap text-[28px] font-black uppercase tracking-[0.18em] text-slate-700/10"
+            style={{
+              top: `${4 + index * 9}%`,
+              left: index % 2 === 0 ? "45%" : "58%",
+              transform:
+                "translateX(-50%) rotate(-28deg)",
+            }}
+          >
+            Preview • CV Kilat
+          </span>
+        ))}
       </div>
     </div>
   );

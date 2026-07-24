@@ -13,3 +13,10 @@ client/dist/
 
 # Local VS Code settings
 .vscode/
+
+# Local patch, backup, and audit artifacts
+*.backup-*
+install-*.cjs
+repair-*.cjs
+patch-*.cjs
+ck-*.txt

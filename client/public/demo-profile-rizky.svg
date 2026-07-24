@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title desc">
+  <title id="title">Foto profil contoh Rizky Saputra</title>
+  <desc id="desc">Ilustrasi pria profesional memakai jas dan dasi.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="1" stop-color="#bfdbfe"/>
+    </linearGradient>
+    <linearGradient id="suit" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <circle cx="400" cy="315" r="178" fill="#e7b58f"/>
+  <path d="M225 295c5-135 72-219 182-219 119 0 181 91 173 225-27-47-64-81-111-99-63 41-142 55-244 41z" fill="#172033"/>
+  <path d="M250 288c15-26 35-49 60-68 11 48 40 73 86 76 61 4 114-20 159-71 13 27 21 57 24 90-14 114-75 191-179 191-101 0-164-78-175-189 5-10 13-20 25-29z" fill="#efbd96"/>
+  <ellipse cx="335" cy="332" rx="16" ry="11" fill="#1f2937"/>
+  <ellipse cx="470" cy="332" rx="16" ry="11" fill="#1f2937"/>
+  <path d="M356 405c29 25 62 25 94 0" fill="none" stroke="#9f4f43" stroke-width="13" stroke-linecap="round"/>
+  <path d="M400 346c-7 21-9 39-4 54 8 5 18 5 29 0" fill="none" stroke="#c98268" stroke-width="8" stroke-linecap="round"/>
+  <path d="M305 296c23-14 48-17 75-8M438 288c27-9 53-6 77 9" fill="none" stroke="#172033" stroke-width="12" stroke-linecap="round"/>
+  <path d="M297 480c28 41 63 64 104 64 42 0 77-22 105-64l42 44-147 109-147-109z" fill="#ffffff"/>
+  <path d="M145 800c12-164 98-266 227-294l29 127 31-127c131 29 218 131 229 294z" fill="url(#suit)"/>
+  <path d="M372 506l29 127-61 167H237l76-263zM432 506l-31 127 62 167h103l-76-263z" fill="#334155"/>
+  <path d="M401 633l-35 62 35 105 35-105z" fill="#b91c1c"/>
+  <path d="M332 507l69 126 69-126-40-25h-58z" fill="#f8fafc"/>
+  <path d="M261 577l86 44-41 53-88-55zM541 577l-86 44 41 53 88-55z" fill="#0f172a"/>
+</svg>

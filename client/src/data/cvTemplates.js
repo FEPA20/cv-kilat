@@ -160,7 +160,369 @@ function certification(name, issuer, year) {
   };
 }
 
+// CK-TPL-02 — nine reference layouts and shared demo identity
+const DEMO_PROFILE_PHOTO =
+  "/demo-profile-rizky.svg";
+
+function referenceSample({
+  desiredJob = "Professional Specialist",
+  summary =
+    "Profesional berorientasi hasil dengan pengalaman dalam pengelolaan operasional, koordinasi tim, perbaikan proses, dan pelayanan pelanggan. Terbiasa bekerja berdasarkan target, menjaga kualitas, serta membangun kolaborasi lintas fungsi.",
+  skillNames = [
+    "Problem Solving",
+    "Team Leadership",
+    "Microsoft Excel",
+    "Communication",
+    "Process Improvement",
+    "Data Analysis",
+  ],
+} = {}) {
+  return {
+    contact: {
+      firstName: "Rizky",
+      lastName: "Saputra",
+      desiredJob,
+      phone: "+62 812 3456 7890",
+      email: "rizky.saputra@email.com",
+      address: "Jakarta Selatan",
+      city: "Jakarta",
+      country: "Indonesia",
+      postalCode: "12120",
+    },
+    summary,
+    experiences: [
+      experience({
+        jobTitle: `Senior ${desiredJob}`,
+        employer: "PT Nusantara Karya Indonesia",
+        location: "Jakarta",
+        startDate: "2022-01",
+        endDate: "",
+        current: true,
+        description:
+          "• Memimpin pelaksanaan pekerjaan harian dan memastikan target tercapai.\n• Membuat perbaikan proses yang meningkatkan produktivitas dan akurasi.\n• Berkoordinasi dengan berbagai divisi untuk menyelesaikan kendala operasional.",
+      }),
+      experience({
+        jobTitle: desiredJob,
+        employer: "PT Sentosa Solusi Utama",
+        location: "Tangerang",
+        startDate: "2019-02",
+        endDate: "2021-12",
+        description:
+          "• Menangani administrasi, pelaporan, dan pemantauan indikator kinerja.\n• Menjaga kualitas layanan serta menindaklanjuti kebutuhan pelanggan.",
+      }),
+      experience({
+        jobTitle: "Junior Specialist",
+        employer: "PT Mitra Profesional",
+        location: "Bekasi",
+        startDate: "2017-01",
+        endDate: "2019-01",
+        description:
+          "• Mendukung kegiatan tim dan menyiapkan dokumentasi pekerjaan.\n• Membantu evaluasi hasil serta pelaksanaan tindak lanjut.",
+      }),
+    ],
+    education: [
+      education({
+        school: "Universitas Indonesia",
+        location: "Depok",
+        degree: "S1 Manajemen",
+        startDate: "2013-08",
+        endDate: "2017-07",
+        description: "Konsentrasi Manajemen Operasional.",
+      }),
+      education({
+        school: "SMA Negeri 1 Jakarta",
+        location: "Jakarta",
+        degree: "Ilmu Pengetahuan Sosial",
+        startDate: "2010-07",
+        endDate: "2013-06",
+        description: "",
+      }),
+    ],
+    showSkillLevel: true,
+    skills: skillNames.map((name, index) =>
+      skill(name, Math.max(3, 5 - (index % 3)))
+    ),
+    languages: [
+      language("Bahasa Indonesia", "Native"),
+      language("English", "Profesional"),
+    ],
+    hobbies: [
+      hobby("Membaca"),
+      hobby("Olahraga"),
+      hobby("Traveling"),
+    ],
+    certifications: [
+      certification(
+        "Professional Leadership",
+        "CV Kilat Academy",
+        "2024"
+      ),
+      certification(
+        "Business Process Improvement",
+        "Professional Institute",
+        "2023"
+      ),
+    ],
+    photo: {
+      ...BASE_PHOTO,
+      originalUrl: DEMO_PROFILE_PHOTO,
+      editedUrl: DEMO_PROFILE_PHOTO,
+      shape: "circle",
+      size: 104,
+      position: "right",
+    },
+  };
+}
+
 export const CV_TEMPLATES = [
+{
+    id: "ref-ribbon-corporate",
+    name: "Ribbon Corporate",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Header foto profesional dengan pita status dan sidebar data pribadi.",
+    accent: "#c62828",
+    tags: ["Corporate", "Sidebar", "Foto"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-ribbon-corporate",
+      primaryColor: "#c62828",
+      headerBackground: "#f1f5f9",
+      fontFamily: "Arial",
+      pageMargin: 0,
+      sectionSpacing: 16,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Customer Service Specialist",
+    }),
+  },
+  {
+    id: "ref-navy-split",
+    name: "Navy Split",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Sidebar navy dengan foto besar dan area pengalaman dua kolom.",
+    accent: "#171d63",
+    tags: ["Navy", "Modern", "Dua Kolom"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-navy-split",
+      primaryColor: "#171d63",
+      headerBackground: "#ffffff",
+      fontFamily: "Inter",
+      pageMargin: 0,
+      sectionSpacing: 16,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Digital Marketing Specialist",
+      skillNames: [
+        "Copywriting",
+        "Social Media",
+        "Paid Advertising",
+        "Data Analytics",
+        "SEO",
+        "Content Strategy",
+      ],
+    }),
+  },
+  {
+    id: "ref-editorial-grid",
+    name: "Editorial Grid",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Layout editorial tiga kolom dengan komposisi tegas dan modern.",
+    accent: "#111827",
+    tags: ["Editorial", "Tiga Kolom", "Creative"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-editorial-grid",
+      primaryColor: "#111827",
+      pageBackground: "#fbf8ed",
+      headerBackground: "#fbf8ed",
+      fontFamily: "Arial",
+      pageMargin: 0,
+      sectionSpacing: 15,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Account Executive",
+      skillNames: [
+        "Sales Strategy",
+        "Negotiation",
+        "Customer Relations",
+        "Account Management",
+        "Presentation",
+        "Reporting",
+      ],
+    }),
+  },
+  {
+    id: "ref-orange-sidebar",
+    name: "Orange Sidebar",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Header jingga dan sidebar gelap untuk profil yang lebih berkarakter.",
+    accent: "#e94836",
+    tags: ["Orange", "Creative", "Sidebar"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-orange-sidebar",
+      primaryColor: "#e94836",
+      headerBackground: "#e94836",
+      fontFamily: "Inter",
+      pageMargin: 0,
+      sectionSpacing: 16,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Web Developer",
+      skillNames: [
+        "JavaScript",
+        "React",
+        "HTML & CSS",
+        "REST API",
+        "Git",
+        "Responsive Design",
+      ],
+    }),
+  },
+  {
+    id: "ref-classic-bands",
+    name: "Classic Bands",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Gaya klasik dengan judul bagian berupa pita abu-abu yang formal.",
+    accent: "#a3a3a3",
+    tags: ["Classic", "Formal", "Grayscale"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-classic-bands",
+      primaryColor: "#64748b",
+      headerBackground: "#ffffff",
+      fontFamily: "Georgia",
+      pageMargin: 0,
+      sectionSpacing: 15,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Business Administration Officer",
+    }),
+  },
+  {
+    id: "ref-clean-architect",
+    name: "Clean Architect",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Tampilan bersih dan formal untuk profesi teknis maupun manajerial.",
+    accent: "#111827",
+    tags: ["Clean", "Technical", "Formal"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-clean-architect",
+      primaryColor: "#111827",
+      headerBackground: "#ffffff",
+      fontFamily: "Arial",
+      pageMargin: 0,
+      sectionSpacing: 16,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Project Architect",
+      skillNames: [
+        "AutoCAD",
+        "Project Planning",
+        "SketchUp",
+        "Quality Control",
+        "Team Coordination",
+        "Site Supervision",
+      ],
+    }),
+  },
+  {
+    id: "ref-minimal-columns",
+    name: "Minimal Columns",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Dua kolom lapang dengan penekanan pada pengalaman dan keahlian.",
+    accent: "#334155",
+    tags: ["Minimal", "Dua Kolom", "ATS Friendly"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-minimal-columns",
+      primaryColor: "#334155",
+      headerBackground: "#ffffff",
+      fontFamily: "Inter",
+      pageMargin: 0,
+      sectionSpacing: 18,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Operations Supervisor",
+    }),
+  },
+  {
+    id: "ref-yellow-line",
+    name: "Yellow Line",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Foto bulat dan aksen garis kuning untuk tampilan modern profesional.",
+    accent: "#facc15",
+    tags: ["Yellow", "Modern", "Foto"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-yellow-line",
+      primaryColor: "#facc15",
+      headerBackground: "#ffffff",
+      fontFamily: "Inter",
+      pageMargin: 0,
+      sectionSpacing: 16,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Civil Engineer",
+      skillNames: [
+        "AutoCAD",
+        "Project Supervision",
+        "Quantity Take-Off",
+        "Quality Control",
+        "Microsoft Project",
+        "Problem Solving",
+      ],
+    }),
+  },
+  {
+    id: "ref-teal-banner",
+    name: "Teal Banner",
+    category: "Referensi Baru",
+    badge: "Baru",
+    description:
+      "Banner hijau tua dengan foto bulat dan penanda section modern.",
+    accent: "#155e63",
+    tags: ["Teal", "Banner", "Professional"],
+    design: {
+      ...BASE_DESIGN,
+      template: "ref-teal-banner",
+      primaryColor: "#155e63",
+      headerBackground: "#155e63",
+      fontFamily: "Inter",
+      pageMargin: 0,
+      sectionSpacing: 15,
+    },
+    sampleData: referenceSample({
+      desiredJob: "Interior Design Specialist",
+      skillNames: [
+        "AutoCAD",
+        "SketchUp",
+        "Adobe Photoshop",
+        "Lumion",
+        "Project Design",
+        "Client Presentation",
+      ],
+    }),
+  },
+
   {
     id: "professional-navy",
     name: "Professional Navy",
@@ -1761,7 +2123,34 @@ export const CV_TEMPLATES = [
     ],
   },
 },
-];
+].map((template) => ({
+  ...template,
+  sampleData: {
+    ...(template.sampleData || {}),
+    contact: {
+      ...(template.sampleData?.contact || {}),
+      firstName: "Rizky",
+      lastName: "Saputra",
+      email: "rizky.saputra@email.com",
+      phone: "+62 812 3456 7890",
+    },
+    photo: {
+      ...BASE_PHOTO,
+      ...(template.sampleData?.photo || {}),
+      originalUrl: DEMO_PROFILE_PHOTO,
+      editedUrl: DEMO_PROFILE_PHOTO,
+      shape:
+        template.sampleData?.photo?.shape ||
+        "circle",
+      size:
+        template.sampleData?.photo?.size ||
+        104,
+      position:
+        template.sampleData?.photo?.position ||
+        "right",
+    },
+  },
+}));
 
 function refreshArrayIds(items) {
   return (Array.isArray(items) ? items : []).map((item) => ({

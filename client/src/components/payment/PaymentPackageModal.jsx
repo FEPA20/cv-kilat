@@ -1,26 +1,28 @@
 const PACKAGES = [
   {
     code: "SINGLE_CV",
-    title: "1 CV Premium",
+    title: "1 CV + 1 Surat Lamaran",
     price: "Rp19.000",
     badge: "",
     description:
-      "Satu CV premium dengan revisi dan unduh ulang selama 7 hari.",
+      "Paket satu dokumen utama dan satu dokumen pendamping untuk satu kebutuhan lamaran.",
     benefits: [
       "1 CV premium",
+      "1 surat lamaran premium",
       "PDF tanpa watermark",
       "Revisi dan unduh ulang 7 hari",
     ],
   },
   {
     code: "THREE_CV",
-    title: "3 Kredit CV",
+    title: "3 CV + 3 Surat Lamaran",
     price: "Rp39.000",
     badge: "Paling Hemat",
     description:
-      "Buat beberapa versi CV untuk kebutuhan lowongan yang berbeda.",
+      "Siapkan tiga versi CV dan tiga surat lamaran untuk lowongan yang berbeda.",
     benefits: [
       "3 CV berbeda",
+      "3 surat lamaran berbeda",
       "PDF tanpa watermark",
       "Kredit berlaku 60 hari",
     ],
@@ -31,9 +33,10 @@ const PACKAGES = [
     price: "Rp59.000",
     badge: "Akses Terlengkap",
     description:
-      "Akses premium selama masa aktif untuk mendukung pencarian kerja.",
+      "Akses premium CV dan surat lamaran selama masa aktif pencarian kerja.",
     benefits: [
-      "CV premium tanpa batas",
+      "CV premium tanpa batas wajar",
+      "Surat lamaran tanpa batas wajar",
       "PDF tanpa watermark",
       "Akses aktif 30 hari",
     ],
@@ -65,7 +68,7 @@ export default function PaymentPackageModal({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-black text-slate-900 sm:text-2xl">
-                Unduh CV tanpa watermark
+                Unduh dokumen tanpa watermark
               </h2>
 
               {sandbox ? (
@@ -76,7 +79,7 @@ export default function PaymentPackageModal({
             </div>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Pilih paket. Akses unduh diberikan setelah pembayaran
+              Pilih paket CV dan surat lamaran. Akses unduh diberikan setelah pembayaran
               terverifikasi oleh server CV Kilat.
             </p>
           </div>

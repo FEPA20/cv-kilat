@@ -14,14 +14,14 @@ export type PlanDefinition = {
 export const PLANS: Record<PlanCode, PlanDefinition> = {
   SINGLE_CV: {
     code: "SINGLE_CV",
-    name: "1 CV Premium",
+    name: "1 CV + 1 Surat Lamaran",
     amount: 19000,
     credits: 1,
     durationDays: 7,
   },
   THREE_CV: {
     code: "THREE_CV",
-    name: "3 Kredit CV",
+    name: "3 CV + 3 Surat Lamaran",
     amount: 39000,
     credits: 3,
     durationDays: 60,

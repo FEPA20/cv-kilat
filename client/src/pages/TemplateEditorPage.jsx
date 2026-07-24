@@ -6,6 +6,10 @@ import AIPhotoStudio from "../components/photo/AIPhotoStudio";
 import LogoCVKilat from "../components/LogoCVKilat";
 import PaymentPackageModal from "../components/payment/PaymentPackageModal";
 import { loadMidtransSnap } from "../lib/midtrans";
+import ReferenceTemplatePreview, {
+  REFERENCE_EDITOR_TEMPLATES,
+  isReferenceTemplate,
+} from "../components/templates/ReferenceTemplatePreview";
 
 const PANELS = [
   { id: "template", label: "Template", icon: "▤" },
@@ -399,6 +403,11 @@ function SectionHeading({ children, design, template }) {
 }
 
 function TemplatePreview({ data }) {
+  // CK-TPL-02: delegasikan sembilan layout referensi ke renderer khusus.
+  if (isReferenceTemplate(data?.design?.template)) {
+    return <ReferenceTemplatePreview data={data} />;
+  }
+
   const { contact, design, photo } = data;
   const language = design.language;
   const template = design.template;
@@ -1079,8 +1088,17 @@ const downloadPDF = async () => {
       )
     );
 
-    const canvas = await html2canvas(previewElement, {
-      scale: 2,
+    // CK-TPL-04: template referensi ditangkap lebih tajam.
+    const referencePdf =
+      isReferenceTemplate(
+        data?.design?.template,
+      );
+
+    const canvas =
+      await html2canvas(
+        previewElement,
+        {
+      scale: referencePdf ? 3 : 2,
       useCORS: true,
       allowTaint: false,
       logging: false,
@@ -1101,10 +1119,15 @@ const downloadPDF = async () => {
       );
     }
 
-    const imageData = canvas.toDataURL(
-      "image/jpeg",
-      0.96
-    );
+    const imageFormat = referencePdf ? "PNG" : "JPEG";
+
+    const imageData =
+      referencePdf
+        ? canvas.toDataURL("image/png")
+        : canvas.toDataURL(
+            "image/jpeg",
+            0.96,
+          );
 
     if (!imageData || imageData === "data:,") {
       throw new Error(
@@ -1162,7 +1185,7 @@ const downloadPDF = async () => {
 
       pdf.addImage(
         imageData,
-        "JPEG",
+        imageFormat,
         imageX,
         0,
         imageWidth,
@@ -1488,7 +1511,7 @@ const downloadPDF = async () => {
 
         pdf.addImage(
           pageImageData,
-          "JPEG",
+          imageFormat,
           0,
           0,
           pageWidth,
@@ -2281,6 +2304,7 @@ const getFunctionErrorMessage = async (error) => {
         { id: "ats", name: "ATS", description: "Satu kolom sederhana dan mudah dibaca ATS." },
         { id: "executive", name: "Executive", description: "Aksen tegas untuk profil berpengalaman." },
         { id: "minimal", name: "Minimal", description: "Tampilan bersih dengan ruang putih luas." },
+        ...REFERENCE_EDITOR_TEMPLATES,
       ];
 
       return (
@@ -2291,7 +2315,15 @@ const getFunctionErrorMessage = async (error) => {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => updateDesign("template", item.id)}
+                onClick={() => {
+                  updateDesign("template", item.id);
+                  if (item.primaryColor) {
+                    updateDesign(
+                      "primaryColor",
+                      item.primaryColor,
+                    );
+                  }
+                }}
                 className={`rounded-2xl border p-4 text-left transition ${data.design.template === item.id ? "border-sky-500 bg-sky-50 ring-4 ring-sky-100" : "border-slate-200 bg-white hover:border-sky-300"}`}
               >
                 <div className="mb-4 h-28 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3">

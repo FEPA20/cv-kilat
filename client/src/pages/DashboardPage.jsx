@@ -1112,22 +1112,34 @@ function SelectedCvPanel({
   );
 }
 
-function MiniCvPreview({ data, compact = false }) {
-  const experiences = Array.isArray(data.experience) ? data.experience : [];
-  const skills = Array.isArray(data.skills) ? data.skills : [];
-
+function MiniCvPreview({
+  data,
+  compact = false,
+}) {
+  /*
+   * Preview compact pada kartu dokumen hanya berupa skeleton.
+   * Tidak ada data CV asli yang ditampilkan.
+   */
   if (compact) {
     return (
-      <div className="h-[112px] w-[82px] shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+      <div
+        className="relative h-[112px] w-[82px] shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+        aria-label="Thumbnail CV terlindungi"
+        onContextMenu={(event) => event.preventDefault()}
+        onDragStart={(event) => event.preventDefault()}
+      >
         <div className="h-4 rounded-sm bg-amber-100" />
+
         <div className="mt-2 h-1.5 w-10 rounded bg-slate-800" />
         <div className="mt-1 h-1 w-12 rounded bg-slate-300" />
+
         <div className="mt-3 grid grid-cols-[1fr_1.4fr] gap-1">
           <div className="space-y-1">
             <div className="h-1 rounded bg-slate-300" />
             <div className="h-1 rounded bg-slate-200" />
             <div className="h-1 rounded bg-slate-200" />
           </div>
+
           <div className="space-y-1">
             <div className="h-1 rounded bg-slate-400" />
             <div className="h-1 rounded bg-slate-200" />
@@ -1135,67 +1147,165 @@ function MiniCvPreview({ data, compact = false }) {
             <div className="h-1 rounded bg-slate-200" />
           </div>
         </div>
+
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span
+            className="whitespace-nowrap text-[5px] font-black uppercase tracking-[0.12em] text-slate-500/35"
+            style={{ transform: "rotate(-28deg)" }}
+          >
+            CV KILAT
+          </span>
+        </div>
       </div>
     );
   }
 
+  /*
+   * Dashboard tidak merender isi lengkap CV.
+   * Nama masih diperbolehkan untuk identifikasi dokumen,
+   * tetapi kontak, ringkasan, pengalaman, pendidikan,
+   * dan keahlian tidak dimasukkan ke DOM preview.
+   */
+  const fullName = getFullName(data);
+
+  const jobTitle =
+    data?.jobTitle ||
+    data?.contact?.desiredJob ||
+    "CV Profesional";
+
+  const watermarkItems = Array.from(
+    { length: 9 },
+    (_, index) => index
+  );
+
   return (
-    <div className="mx-auto aspect-[210/297] w-full max-w-[255px] overflow-hidden break-words bg-white text-[6px] leading-[1.45] text-slate-800 shadow-lg">
-      <div className="bg-[#eadfd8] px-5 py-4">
-        <p className="text-[12px] font-bold text-slate-900">
-          {getFullName(data)}
+    <div
+      className="relative mx-auto aspect-[210/297] w-full max-w-[255px] select-none overflow-hidden border border-slate-200 bg-white text-[6px] leading-[1.45] text-slate-800 shadow-lg"
+      aria-label="Preview CV terlindungi"
+      onContextMenu={(event) => event.preventDefault()}
+      onDragStart={(event) => event.preventDefault()}
+      onCopy={(event) => event.preventDefault()}
+    >
+      {/* Header hanya untuk identifikasi dokumen. */}
+      <div className="relative z-[1] bg-[#eadfd8] px-5 py-4">
+        <p className="truncate text-[12px] font-bold text-slate-900">
+          {fullName}
         </p>
-        <p className="mt-1 text-[5px] text-slate-600">
-          {[data.email, data.phone].filter(Boolean).join(" · ") ||
-            "email@contoh.com · 08xxxxxxxxxx"}
+
+        <p className="mt-1 truncate text-[5px] font-medium text-slate-600">
+          {jobTitle}
         </p>
+
+        <div className="mt-2 flex gap-1">
+          <span className="h-1 w-14 rounded-full bg-slate-400/45" />
+          <span className="h-1 w-8 rounded-full bg-slate-400/25" />
+        </div>
       </div>
 
-      <div className="grid min-h-full grid-cols-[0.85fr_1.15fr]">
+      {/* Skeleton CV. Tidak memakai isi CV pengguna. */}
+      <div className="relative z-[1] grid h-full grid-cols-[0.85fr_1.15fr]">
         <div className="border-r border-slate-200 px-4 py-4">
-          <p className="font-bold uppercase tracking-wide">Ringkasan</p>
-          <p className="mt-2 text-slate-600">
-            {data.summary ||
-              "Ringkasan profesional Anda akan tampil di bagian ini."}
-          </p>
+          <div className="h-1.5 w-12 rounded bg-slate-700/75" />
 
-          <p className="mt-4 font-bold uppercase tracking-wide">Keahlian</p>
-          <div className="mt-2 space-y-1 text-slate-600">
-            {(skills.length ? skills.slice(0, 4) : ["Keahlian utama"]).map(
-              (skill, index) => (
-                <p key={index}>• {typeof skill === "string" ? skill : skill.name}</p>
+          <div className="mt-3 space-y-1.5">
+            <div className="h-1 rounded bg-slate-300" />
+            <div className="h-1 rounded bg-slate-200" />
+            <div className="h-1 w-4/5 rounded bg-slate-200" />
+            <div className="h-1 rounded bg-slate-200" />
+            <div className="h-1 w-3/4 rounded bg-slate-200" />
+          </div>
+
+          <div className="mt-6 h-1.5 w-10 rounded bg-slate-700/75" />
+
+          <div className="mt-3 space-y-2">
+            {Array.from({ length: 5 }).map(
+              (_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-1.5"
+                >
+                  <span className="h-1 w-1 rounded-full bg-slate-400" />
+                  <span
+                    className="h-1 rounded bg-slate-200"
+                    style={{
+                      width: `${55 + index * 6}%`,
+                    }}
+                  />
+                </div>
               )
             )}
           </div>
         </div>
 
         <div className="px-4 py-4">
-          <p className="font-bold uppercase tracking-wide">Pengalaman</p>
-          <div className="mt-2 space-y-3">
-            {(experiences.length ? experiences.slice(0, 3) : [{}]).map(
-              (experience, index) => (
-                <div key={index}>
-                  <p className="font-bold">
-                    {experience.role || experience.job || "Posisi pekerjaan"}
-                  </p>
-                  <p className="text-slate-500">
-                    {experience.company || "Nama perusahaan"}
-                  </p>
-                  <p className="mt-1 text-slate-600">
-                    {experience.description ||
-                      experience.desc ||
-                      "Deskripsi singkat pencapaian dan tanggung jawab."}
-                  </p>
-                </div>
-              )
-            )}
+          <div className="h-1.5 w-14 rounded bg-slate-700/75" />
+
+          <div className="mt-3">
+            <div className="h-1.5 w-20 rounded bg-slate-500/70" />
+            <div className="mt-1.5 h-1 w-14 rounded bg-slate-300" />
+
+            <div className="mt-2 space-y-1.5">
+              <div className="h-1 rounded bg-slate-200" />
+              <div className="h-1 rounded bg-slate-200" />
+              <div className="h-1 w-5/6 rounded bg-slate-200" />
+              <div className="h-1 rounded bg-slate-200" />
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="h-1.5 w-16 rounded bg-slate-500/70" />
+            <div className="mt-1.5 h-1 w-12 rounded bg-slate-300" />
+
+            <div className="mt-2 space-y-1.5">
+              <div className="h-1 rounded bg-slate-200" />
+              <div className="h-1 rounded bg-slate-200" />
+              <div className="h-1 w-4/5 rounded bg-slate-200" />
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Watermark berulang di atas seluruh thumbnail. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-20 overflow-hidden"
+      >
+        {watermarkItems.map((index) => (
+          <span
+            key={index}
+            className="absolute whitespace-nowrap text-[9px] font-black uppercase tracking-[0.16em] text-slate-800/10"
+            style={{
+              top: `${6 + index * 11}%`,
+              left: index % 2 === 0 ? "48%" : "55%",
+              transform:
+                "translateX(-50%) rotate(-28deg)",
+            }}
+          >
+            Preview • CV Kilat
+          </span>
+        ))}
+      </div>
+
+      {/* Penutup bawah agar halaman tidak dapat diambil utuh. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-[42%] bg-gradient-to-t from-white via-white/95 to-transparent" />
+
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-40 rounded-xl border border-slate-200 bg-slate-950/90 px-3 py-3 text-center text-white shadow-xl backdrop-blur-sm">
+        <div className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[12px]">
+          🔒
+        </div>
+
+        <p className="mt-1.5 text-[8px] font-extrabold">
+          Preview CV dilindungi
+        </p>
+
+        <p className="mt-1 text-[5px] leading-relaxed text-slate-300">
+          Isi lengkap tersedia melalui editor. PDF tanpa
+          watermark mengikuti akses paket.
+        </p>
       </div>
     </div>
   );
 }
-
 function DocumentsView({
   cvList,
   loading,
