@@ -10,3 +10,6 @@ dist/
 client/dist/
 .vercel/
 *.local
+
+# Local VS Code settings
+.vscode/

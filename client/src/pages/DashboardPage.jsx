@@ -334,7 +334,7 @@ export default function DashboardPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#eef7ff] text-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-[#eef7ff] text-slate-900">
       <DashboardHeader
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -343,7 +343,7 @@ export default function DashboardPage({
         onBack={onBack}
       />
 
-      <main className="mx-auto max-w-[1480px] px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full min-w-0 max-w-[1480px] px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         {notice && (
           <div className="mb-6 flex items-center justify-between rounded-2xl border border-blue-100 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
             <span>{notice}</span>
@@ -436,8 +436,8 @@ function DashboardHeader({
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
-      <div className="mx-auto flex min-h-[76px] max-w-[1480px] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-7">
+      <div className="mx-auto flex min-h-[76px] w-full min-w-0 max-w-[1480px] items-center justify-between gap-2 px-4 sm:gap-5 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-7">
           <button
             type="button"
             onClick={onBack}
@@ -471,7 +471,7 @@ function DashboardHeader({
           </nav>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={onCreate}
@@ -493,7 +493,7 @@ function DashboardHeader({
           <button
             type="button"
             onClick={onLogout}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 sm:px-4"
           >
             Logout
           </button>
@@ -501,7 +501,7 @@ function DashboardHeader({
       </div>
 
       <div className="border-t border-slate-100 px-4 py-2 lg:hidden">
-        <div className="mx-auto flex max-w-[1480px] gap-2 overflow-x-auto">
+        <div className="mx-auto flex w-full min-w-0 max-w-[1480px] gap-2 overflow-x-auto overscroll-x-contain pb-1">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
@@ -615,8 +615,8 @@ function DashboardOverview({
       ) : cvList.length === 0 ? (
         <EmptyDashboard onCreate={onCreate} />
       ) : (
-        <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="space-y-6">
+        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="min-w-0 space-y-6">
             <ChecklistPanel
               selectedCv={selectedCv}
               selectedScore={selectedScore}
@@ -729,9 +729,9 @@ function QuickActionCards({
           return (
             <article
               key={action.id}
-              className="group flex min-h-[250px] flex-col rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl sm:p-6"
+              className="group flex min-h-[250px] min-w-0 flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl sm:p-6"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
                 <span
                   className={`flex h-13 w-13 items-center justify-center rounded-2xl ${action.iconClass}`}
                 >
@@ -837,7 +837,7 @@ function ChecklistPanel({
   const doneCount = tasks.filter((task) => task.done).length;
 
   return (
-    <article className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
+    <article className="min-w-0 overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-col justify-between gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">
@@ -859,9 +859,9 @@ function ChecklistPanel({
           return (
             <div
               key={task.title}
-              className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-200 hover:shadow-md sm:flex-row sm:items-center"
+              className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-sky-200 hover:shadow-md sm:flex-row sm:items-center sm:p-5"
             >
-              <div className="flex flex-1 items-start gap-4">
+              <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
                 <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 text-sky-600">
                   <Icon className="h-7 w-7" />
                   <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-white text-[11px] font-extrabold text-slate-500 shadow">
@@ -899,7 +899,7 @@ function ChecklistPanel({
               </div>
 
               <div
-                className={`flex items-center gap-2 self-start rounded-full px-3 py-1.5 text-xs font-semibold sm:self-center ${
+                className={`flex shrink-0 items-center gap-2 self-start rounded-full px-3 py-1.5 text-xs font-semibold sm:self-center ${
                   task.done
                     ? "bg-emerald-50 text-emerald-700"
                     : "bg-slate-100 text-slate-500"
@@ -929,8 +929,8 @@ function RecentDocuments({
   deletingId,
 }) {
   return (
-    <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-center justify-between gap-4">
+    <article className="min-w-0 overflow-hidden rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="flex min-w-0 flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-600">
             Dokumen terbaru
@@ -963,13 +963,13 @@ function RecentDocuments({
                   setSelectedId(cv.id);
                 }
               }}
-              className={`group cursor-pointer rounded-2xl border p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+              className={`group min-w-0 cursor-pointer overflow-hidden rounded-2xl border p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
                 active
                   ? "border-sky-300 bg-sky-50/70 shadow-md"
                   : "border-slate-200 bg-white hover:border-sky-200 hover:shadow-md"
               }`}
             >
-              <div className="flex gap-4">
+              <div className="flex min-w-0 gap-3 sm:gap-4">
                 <MiniCvPreview data={data} compact />
 
                 <div className="min-w-0 flex-1">
@@ -1036,11 +1036,11 @@ function SelectedCvPanel({
   onCreateCoverLetter,
 }) {
   return (
-    <aside className="self-start rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm xl:sticky xl:top-28">
+    <aside className="min-w-0 self-start overflow-hidden rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:sticky xl:top-28">
       <select
         value={selectedId}
         onChange={(event) => setSelectedId(event.target.value)}
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+        className="block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100 sm:px-4"
       >
         {cvList.map((cv, index) => (
           <option key={cv.id} value={cv.id}>
@@ -1049,15 +1049,15 @@ function SelectedCvPanel({
         ))}
       </select>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-4">
+      <div className="mt-4 min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-3 sm:p-4">
         <MiniCvPreview data={selectedData} />
       </div>
 
       <div className="mt-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
           <span className="text-sm font-bold text-slate-700">Kesiapan CV</span>
           <span
-            className={`rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${selectedTone.badge}`}
+            className={`max-w-full rounded-full px-2.5 py-1 text-right text-xs font-bold ring-1 ${selectedTone.badge}`}
           >
             {selectedScore}% · {selectedTone.label}
           </span>
@@ -1070,7 +1070,7 @@ function SelectedCvPanel({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => selectedCv && onEdit?.(selectedCv)}
@@ -1140,7 +1140,7 @@ function MiniCvPreview({ data, compact = false }) {
   }
 
   return (
-    <div className="mx-auto aspect-[210/297] w-full max-w-[255px] overflow-hidden bg-white text-[6px] leading-[1.45] text-slate-800 shadow-lg">
+    <div className="mx-auto aspect-[210/297] w-full max-w-[255px] overflow-hidden break-words bg-white text-[6px] leading-[1.45] text-slate-800 shadow-lg">
       <div className="bg-[#eadfd8] px-5 py-4">
         <p className="text-[12px] font-bold text-slate-900">
           {getFullName(data)}
@@ -1228,7 +1228,7 @@ function DocumentsView({
             return (
               <article
                 key={cv.id}
-                className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                className="min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
               >
                 <div className="overflow-hidden rounded-2xl bg-slate-100 p-4">
                   <MiniCvPreview data={data} />

@@ -9,7 +9,7 @@ export default function HeroSection({
   const handleTemplates = onTemplates || onStart;
 
   return (
-    <section className="relative overflow-hidden bg-[linear-gradient(105deg,#f7faff_0%,#f8fbff_45%,#fff9c9_100%)] px-5 pb-20 pt-12 sm:px-6 lg:px-8 lg:pb-24 lg:pt-20">
+    <section className="relative overflow-hidden bg-[linear-gradient(105deg,#f7faff_0%,#f8fbff_45%,#fff9c9_100%)] px-5 pb-20 pt-28 sm:px-6 sm:pt-32 lg:px-8 lg:pb-24 lg:pt-32">
       {/* BACKGROUND DECORATION */}
       <div className="pointer-events-none absolute -left-40 top-0 h-[420px] w-[420px] rounded-full bg-sky-200/30 blur-[120px]" />
       <div className="pointer-events-none absolute -right-28 top-24 h-[440px] w-[440px] rounded-full bg-yellow-300/30 blur-[120px]" />

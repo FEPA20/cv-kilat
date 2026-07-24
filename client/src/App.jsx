@@ -1,5 +1,6 @@
 import { lazy, useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { loadMidtransSnap } from "./lib/midtrans";
 
 import LandingPage from "./pages/LandingPage";
 import CookieConsentBanner from "./components/CookieConsentBanner";
@@ -51,6 +52,14 @@ export default function App() {
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [pendingAfterLogin, setPendingAfterLogin] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [pricingPaymentBusy, setPricingPaymentBusy] =
+    useState(false);
+  const [pricingPaymentMessage, setPricingPaymentMessage] =
+    useState("");
+  const [pricingPaymentOrderId, setPricingPaymentOrderId] =
+    useState(null);
+  const [pricingPaymentPlanCode, setPricingPaymentPlanCode] =
+    useState(null);
   const [legalReturnPage, setLegalReturnPage] = useState("landing");
 
   // ======================================================
@@ -535,30 +544,334 @@ export default function App() {
   }
 
   // ======================================================
-// PRICING PAGE
-// ======================================================
-if (page === "pricing") {
-  return (
-    <>
-      <PricingPage
-        user={user}
-        onBack={() => setPage("landing")}
-        onChoosePlan={(plan) => {
-          if (!user) {
-            openLogin("pricing");
-            return;
-          }
+  // PRICING PAYMENT
+  // ======================================================
+  const resolvePricingPlanCode = (plan) => {
+    const id = String(plan?.id || "").toLowerCase();
+    const name = String(plan?.name || "").toLowerCase();
+    const price = String(plan?.price || "").replace(/\D/g, "");
 
-          window.alert(
-            `Paket ${plan.name} dipilih. Sistem pembayaran akan diaktifkan pada tahap berikutnya.`
+    if (
+      price === "19000" ||
+      id.includes("single") ||
+      id.includes("sekali") ||
+      name.includes("sekali")
+    ) {
+      return "SINGLE_CV";
+    }
+
+    if (
+      price === "39000" ||
+      id.includes("three") ||
+      id.includes("credit") ||
+      id.includes("kredit") ||
+      name.includes("3 kredit") ||
+      name.includes("tiga")
+    ) {
+      return "THREE_CV";
+    }
+
+    if (
+      price === "59000" ||
+      id.includes("career") ||
+      id.includes("karier") ||
+      name.includes("career") ||
+      name.includes("karier")
+    ) {
+      return "CAREER_ACCESS";
+    }
+
+    return null;
+  };
+
+  const getPricingFunctionError = async (error) => {
+    try {
+      const payload = await error?.context?.json?.();
+
+      if (payload?.error) return payload.error;
+    } catch {
+      // Gunakan pesan umum di bawah.
+    }
+
+    return (
+      error?.message ||
+      "Terjadi kesalahan saat menghubungi server pembayaran."
+    );
+  };
+
+  const waitForPricingPayment = async (
+    orderId,
+    { wait = true } = {},
+  ) => {
+    const attempts = wait ? 20 : 1;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const { data: order, error } = await supabase
+        .from("payment_orders")
+        .select("status, plan_code, paid_at")
+        .eq("order_id", orderId)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (order?.status === "paid") {
+        return order;
+      }
+
+      if (
+        ["failed", "expired", "cancelled", "refunded"].includes(
+          order?.status,
+        )
+      ) {
+        throw new Error(
+          `Transaksi berstatus ${order.status}. Silakan buat transaksi baru.`,
+        );
+      }
+
+      if (!wait) {
+        return order || { status: "pending" };
+      }
+
+      setPricingPaymentMessage(
+        `Pembayaran diterima. Menunggu verifikasi server (${attempt}/${attempts})...`,
+      );
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1500),
+      );
+    }
+
+    throw new Error(
+      "Pembayaran belum terverifikasi. Tekan “Cek status” beberapa saat lagi.",
+    );
+  };
+
+  const verifyPricingPayment = async (
+    orderId = pricingPaymentOrderId,
+    { wait = false } = {},
+  ) => {
+    if (!orderId) return false;
+
+    setPricingPaymentBusy(true);
+
+    try {
+      const order = await waitForPricingPayment(orderId, {
+        wait,
+      });
+
+      if (order?.status !== "paid") {
+        setPricingPaymentMessage(
+          "Pembayaran masih pending. Selesaikan pembayaran lalu cek kembali.",
+        );
+        return false;
+      }
+
+      setPricingPaymentMessage(
+        "Pembayaran berhasil dan paket sudah aktif. Paket dapat digunakan saat mengunduh CV.",
+      );
+
+      setPricingPaymentOrderId(null);
+      setPricingPaymentPlanCode(null);
+      return true;
+    } catch (error) {
+      console.error(
+        "Verifikasi pembayaran halaman Upgrade gagal:",
+        error,
+      );
+
+      setPricingPaymentMessage(
+        error?.message ||
+          "Status pembayaran belum dapat diverifikasi.",
+      );
+
+      return false;
+    } finally {
+      setPricingPaymentBusy(false);
+    }
+  };
+
+  const startPricingPayment = async (plan) => {
+    if (!user) {
+      openLogin("pricing");
+      return;
+    }
+
+    if (pricingPaymentBusy) return;
+
+    const planCode = resolvePricingPlanCode(plan);
+
+    if (!planCode) {
+      setPricingPaymentMessage(
+        "Paket tidak dikenali. Muat ulang halaman lalu coba kembali.",
+      );
+      return;
+    }
+
+    setPricingPaymentBusy(true);
+    setPricingPaymentPlanCode(planCode);
+    setPricingPaymentMessage(
+      `Menyiapkan pembayaran ${plan?.name || "CV Kilat"}...`,
+    );
+
+    try {
+      const { data: transaction, error } =
+        await supabase.functions.invoke("create-payment", {
+          body: {
+            plan_code: planCode,
+            document_name:
+              plan?.name || "Paket CV Kilat",
+          },
+        });
+
+      if (error) {
+        throw new Error(
+          await getPricingFunctionError(error),
+        );
+      }
+
+      if (transaction?.error) {
+        throw new Error(transaction.error);
+      }
+
+      if (!transaction?.token || !transaction?.order_id) {
+        throw new Error(
+          "Token transaksi Midtrans tidak tersedia.",
+        );
+      }
+
+      setPricingPaymentOrderId(transaction.order_id);
+
+      const snap = await loadMidtransSnap();
+
+      setPricingPaymentMessage(
+        "Pilih metode pembayaran pada jendela Midtrans.",
+      );
+
+      snap.pay(transaction.token, {
+        onSuccess: async () => {
+          setPricingPaymentMessage(
+            "Pembayaran berhasil. Memverifikasi aktivasi paket...",
           );
-        }}
-      />
 
-      {authOverlays}
-    </>
-  );
-}
+          await verifyPricingPayment(
+            transaction.order_id,
+            { wait: true },
+          );
+        },
+
+        onPending: () => {
+          setPricingPaymentBusy(false);
+          setPricingPaymentMessage(
+            "Pembayaran masih pending. Selesaikan pembayaran lalu tekan “Cek status”.",
+          );
+        },
+
+        onError: (result) => {
+          console.error(
+            "Midtrans pricing payment error:",
+            result,
+          );
+
+          setPricingPaymentBusy(false);
+          setPricingPaymentMessage(
+            "Pembayaran gagal atau layanan pembayaran sedang bermasalah. Silakan coba kembali.",
+          );
+        },
+
+        onClose: () => {
+          setPricingPaymentBusy(false);
+          setPricingPaymentMessage(
+            "Jendela pembayaran ditutup. Paket belum aktif apabila pembayaran belum selesai.",
+          );
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Gagal memulai pembayaran halaman Upgrade:",
+        error,
+      );
+
+      setPricingPaymentBusy(false);
+      setPricingPaymentMessage(
+        error?.message ||
+          "Gagal membuka pembayaran Midtrans.",
+      );
+    }
+  };
+
+  // ======================================================
+  // PRICING PAGE
+  // ======================================================
+  if (page === "pricing") {
+    return (
+      <>
+        <PricingPage
+          user={user}
+          onBack={() => setPage("landing")}
+          onChoosePlan={startPricingPayment}
+        />
+
+        {pricingPaymentBusy ? (
+          <div className="fixed inset-0 z-[139] bg-slate-950/35 backdrop-blur-[1px]" />
+        ) : null}
+
+        {pricingPaymentMessage ? (
+          <div className="pointer-events-none fixed inset-x-0 bottom-5 z-[140] px-4">
+            <div className="pointer-events-auto mx-auto flex w-full max-w-xl items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-lg">
+                {pricingPaymentBusy ? "…" : "✓"}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-extrabold text-slate-900">
+                  {pricingPaymentBusy
+                    ? "Memproses pembayaran"
+                    : "Status pembayaran"}
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  {pricingPaymentMessage}
+                </p>
+
+                {!pricingPaymentBusy &&
+                pricingPaymentOrderId ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      verifyPricingPayment(
+                        pricingPaymentOrderId,
+                      )
+                    }
+                    className="mt-3 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-sky-600"
+                  >
+                    Cek status
+                  </button>
+                ) : null}
+              </div>
+
+              {!pricingPaymentBusy ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPricingPaymentMessage("")
+                  }
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-500 hover:bg-slate-200"
+                  aria-label="Tutup status pembayaran"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {authOverlays}
+      </>
+    );
+  }
+
 
   // ======================================================
   // TEMPLATE GALLERY

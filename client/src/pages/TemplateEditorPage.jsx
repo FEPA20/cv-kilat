@@ -4,6 +4,8 @@ import { supabase } from "../lib/supabase";
 import ProfessionalCVPreview from "../components/ProfessionalCVPreview";
 import AIPhotoStudio from "../components/photo/AIPhotoStudio";
 import LogoCVKilat from "../components/LogoCVKilat";
+import PaymentPackageModal from "../components/payment/PaymentPackageModal";
+import { loadMidtransSnap } from "../lib/midtrans";
 
 const PANELS = [
   { id: "template", label: "Template", icon: "▤" },
@@ -873,8 +875,18 @@ export default function TemplateEditorPage({
   const [saveState, setSaveState] = useState("local");
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentCvId, setPaymentCvId] = useState(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 1023px)").matches
+      : false
+  );
 
 const [photoNotice, setPhotoNotice] = useState(null);
 const [photoProcessingMode, setPhotoProcessingMode] =
@@ -896,6 +908,32 @@ const [photoProcessingMode, setPhotoProcessingMode] =
 
   useEffect(() => () => {
     streamRef.current?.getTracks?.().forEach((track) => track.stop());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
+
+    const syncMobileState = () => {
+      setIsMobile(mediaQuery.matches);
+    };
+
+    syncMobileState();
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", syncMobileState);
+
+      return () => {
+        mediaQuery.removeEventListener("change", syncMobileState);
+      };
+    }
+
+    mediaQuery.addListener(syncMobileState);
+
+    return () => {
+      mediaQuery.removeListener(syncMobileState);
+    };
   }, []);
 
   const updateDesign = (field, value) => {
@@ -926,6 +964,18 @@ const [photoProcessingMode, setPhotoProcessingMode] =
         language: current.design.language,
       },
     }));
+  };
+
+  const openMobilePanel = (panelId) => {
+    setActivePanel(panelId);
+    setMobileSheetOpen(true);
+
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    });
   };
 
   const saveToCloud = async ({ silent = false } = {}) => {
@@ -1886,6 +1936,319 @@ const spellIssues = useMemo(() => {
       };
     });
   };
+const getFunctionErrorMessage = async (error) => {
+    try {
+      const payload = await error?.context?.json?.();
+
+      if (payload?.error) return payload.error;
+    } catch {
+      // Gunakan pesan umum.
+    }
+
+    return (
+      error?.message ||
+      "Terjadi kesalahan saat menghubungi server pembayaran."
+    );
+  };
+
+  const invokePaymentFunction = async (
+    functionName,
+    body,
+  ) => {
+    const { data: functionData, error } =
+      await supabase.functions.invoke(functionName, {
+        body,
+      });
+
+    if (error) {
+      throw new Error(
+        await getFunctionErrorMessage(error),
+      );
+    }
+
+    if (functionData?.error) {
+      throw new Error(functionData.error);
+    }
+
+    return functionData;
+  };
+
+  const preparePaymentCv = async () => {
+    if (!user) {
+      onRequireAuth();
+      return null;
+    }
+
+    if (recordId) return recordId;
+
+    const savedId = await saveToCloud({
+      silent: true,
+    });
+
+    if (!savedId) {
+      throw new Error(
+        "CV perlu disimpan sebelum pembayaran diproses.",
+      );
+    }
+
+    return savedId;
+  };
+
+  const checkPaymentAccess = async (targetCvId) => {
+    return invokePaymentFunction(
+      "check-download-access",
+      {
+        cv_id: targetCvId,
+      },
+    );
+  };
+
+  const consumeAccessAndDownload = async (
+    targetCvId,
+  ) => {
+    const access = await invokePaymentFunction(
+      "consume-download-access",
+      {
+        cv_id: targetCvId,
+        document_name:
+          documentName || "CV_Kilat",
+      },
+    );
+
+    if (!access?.can_download) {
+      throw new Error(
+        "Akses unduh belum aktif.",
+      );
+    }
+
+    setPaymentMessage(
+      "Akses terverifikasi. PDF sedang dibuat tanpa watermark...",
+    );
+
+    await downloadPDF();
+
+    setPaymentOpen(false);
+    setPaymentMessage("");
+  };
+
+  const waitForPaidAccess = async (
+    targetCvId,
+  ) => {
+    const maximumAttempts = 20;
+
+    for (
+      let attempt = 1;
+      attempt <= maximumAttempts;
+      attempt += 1
+    ) {
+      const access =
+        await checkPaymentAccess(targetCvId);
+
+      if (access?.can_download) {
+        return access;
+      }
+
+      setPaymentMessage(
+        `Menunggu verifikasi pembayaran (${attempt}/${maximumAttempts})...`,
+      );
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1500),
+      );
+    }
+
+    throw new Error(
+      "Pembayaran belum terverifikasi. Tunggu sebentar lalu tekan “Saya sudah bayar · Cek akses”.",
+    );
+  };
+
+  const verifyAccessAndDownload = async (
+    targetCvId,
+    { wait = false } = {},
+  ) => {
+    setPaymentBusy(true);
+
+    try {
+      const access = wait
+        ? await waitForPaidAccess(targetCvId)
+        : await checkPaymentAccess(targetCvId);
+
+      if (!access?.can_download) {
+        setPaymentOpen(true);
+        setPaymentMessage(
+          "Akses belum aktif. Pilih paket atau selesaikan pembayaran yang masih pending.",
+        );
+        return false;
+      }
+
+      await consumeAccessAndDownload(targetCvId);
+      return true;
+    } catch (error) {
+      console.error(
+        "Verifikasi pembayaran gagal:",
+        error,
+      );
+
+      setPaymentOpen(true);
+      setPaymentMessage(
+        error?.message ||
+          "Pembayaran belum dapat diverifikasi.",
+      );
+
+      return false;
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
+  const startMidtransPayment = async (
+    planCode,
+  ) => {
+    setPaymentBusy(true);
+    setPaymentMessage(
+      "Menyiapkan pembayaran Midtrans...",
+    );
+
+    try {
+      const targetCvId =
+        paymentCvId ||
+        (await preparePaymentCv());
+
+      if (!targetCvId) {
+        setPaymentBusy(false);
+        return;
+      }
+
+      setPaymentCvId(targetCvId);
+
+      const transaction =
+        await invokePaymentFunction(
+          "create-payment",
+          {
+            plan_code: planCode,
+            cv_id: targetCvId,
+            document_name:
+              documentName || "CV_Kilat",
+          },
+        );
+
+      if (!transaction?.token) {
+        throw new Error(
+          "Token transaksi Midtrans tidak tersedia.",
+        );
+      }
+
+      const snap = await loadMidtransSnap();
+
+      setPaymentMessage(
+        "Pilih metode pembayaran pada jendela Midtrans.",
+      );
+
+      snap.pay(transaction.token, {
+        onSuccess: async () => {
+          setPaymentMessage(
+            "Pembayaran berhasil. Memverifikasi akses unduh...",
+          );
+
+          await verifyAccessAndDownload(
+            targetCvId,
+            { wait: true },
+          );
+        },
+
+        onPending: () => {
+          setPaymentBusy(false);
+          setPaymentMessage(
+            "Pembayaran masih pending. Selesaikan pembayaran lalu tekan “Saya sudah bayar · Cek akses”.",
+          );
+        },
+
+        onError: (result) => {
+          console.error(
+            "Midtrans payment error:",
+            result,
+          );
+
+          setPaymentBusy(false);
+          setPaymentMessage(
+            "Pembayaran gagal. Coba kembali atau pilih metode pembayaran lain.",
+          );
+        },
+
+        onClose: () => {
+          setPaymentBusy(false);
+          setPaymentMessage(
+            "Jendela pembayaran ditutup. Paket belum aktif apabila pembayaran belum selesai.",
+          );
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Gagal memulai pembayaran:",
+        error,
+      );
+
+      setPaymentMessage(
+        error?.message ||
+          "Gagal membuka pembayaran Midtrans.",
+      );
+
+      setPaymentBusy(false);
+    }
+  };
+
+  const requestDownload = async () => {
+    if (!user) {
+      onRequireAuth();
+      return;
+    }
+
+    setPaymentBusy(true);
+    setPaymentMessage(
+      "Memeriksa akses unduh...",
+    );
+
+    try {
+      const targetCvId =
+        await preparePaymentCv();
+
+      if (!targetCvId) {
+        setPaymentBusy(false);
+        return;
+      }
+
+      setPaymentCvId(targetCvId);
+
+      const access =
+        await checkPaymentAccess(targetCvId);
+
+      if (access?.can_download) {
+        await consumeAccessAndDownload(
+          targetCvId,
+        );
+        return;
+      }
+
+      setPaymentOpen(true);
+      setPaymentMessage(
+        "Pilih paket untuk mengunduh CV tanpa watermark.",
+      );
+    } catch (error) {
+      console.error(
+        "Pemeriksaan akses unduh gagal:",
+        error,
+      );
+
+      setPaymentOpen(true);
+      setPaymentMessage(
+        error?.message ||
+          "Akses unduh belum dapat diperiksa.",
+      );
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
 
   const sectionLabel = (sectionKey) => {
     const labels = data.design.language === "EN"
@@ -1923,7 +2286,7 @@ const spellIssues = useMemo(() => {
       return (
         <div>
           <PanelTitle title="Pilih Template" description="Pilih struktur yang paling sesuai dengan posisi dan karakter Anda." />
-          <div className="mt-6 grid grid-cols-2 gap-4">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {templates.map((item) => (
               <button
                 key={item.id}
@@ -1954,7 +2317,7 @@ const spellIssues = useMemo(() => {
             {data.design.sectionOrder.map((sectionKey, index) => {
               const hidden = data.design.hiddenSections.includes(sectionKey);
               return (
-                <div key={sectionKey} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                <div key={sectionKey} className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:gap-3">
                   <span className="cursor-grab text-slate-400">☷</span>
                   <button
                     type="button"
@@ -1963,7 +2326,7 @@ const spellIssues = useMemo(() => {
                   >
                     <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${hidden ? "left-1" : "left-6"}`} />
                   </button>
-                  <span className={`flex-1 text-sm font-medium ${hidden ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                  <span className={`min-w-0 flex-1 truncate text-sm font-medium ${hidden ? "text-slate-400 line-through" : "text-slate-700"}`}>
                     {sectionLabel(sectionKey)}
                   </span>
                   <button type="button" disabled={index === 0} onClick={() => moveSection(sectionKey, "up")} className="rounded-lg p-2 hover:bg-slate-100 disabled:opacity-25">↑</button>
@@ -1983,7 +2346,7 @@ const spellIssues = useMemo(() => {
           <div className="mt-6 space-y-6">
             <div>
               <ControlLabel>Ukuran teks</ControlLabel>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {[{ id: "small", label: "Kecil", size: "A" }, { id: "normal", label: "Normal", size: "A" }, { id: "large", label: "Besar", size: "A" }].map((item, index) => (
                   <button
                     key={item.id}
@@ -2005,7 +2368,7 @@ const spellIssues = useMemo(() => {
               </select>
             </label>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label><ControlLabel>Warna utama</ControlLabel><input type="color" value={data.design.primaryColor} onChange={(event) => updateDesign("primaryColor", event.target.value)} className="h-12 w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-1" /></label>
               <label><ControlLabel>Header</ControlLabel><input type="color" value={data.design.headerBackground} onChange={(event) => updateDesign("headerBackground", event.target.value)} className="h-12 w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-1" /></label>
               <label><ControlLabel>Halaman</ControlLabel><input type="color" value={data.design.pageBackground} onChange={(event) => updateDesign("pageBackground", event.target.value)} className="h-12 w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-1" /></label>
@@ -2129,8 +2492,8 @@ const spellIssues = useMemo(() => {
 };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <header className="sticky top-0 z-30 flex h-20 items-center gap-3 border-b border-slate-200 bg-white px-4 shadow-sm sm:px-5 lg:px-8">
+    <div className="min-h-screen overflow-x-hidden bg-slate-100 text-slate-900">
+      <header className="sticky top-0 z-40 flex h-16 min-w-0 items-center gap-3 border-b border-slate-200 bg-white px-3 shadow-sm sm:px-5 lg:h-20 lg:px-8">
   <button
     type="button"
     onClick={() => onBack(data)}
@@ -2146,7 +2509,7 @@ const spellIssues = useMemo(() => {
     </span>
   </button>
 
-  <div className="shrink-0">
+  <div className="hidden shrink-0 lg:block">
     <LogoCVKilat
       theme="light"
       compact
@@ -2154,19 +2517,60 @@ const spellIssues = useMemo(() => {
     />
   </div>
 
-        <div className="mx-auto hidden items-center gap-2 text-sm text-slate-500 md:flex">
+  <div className="min-w-0 flex-1 lg:hidden">
+    <p className="truncate text-sm font-extrabold text-slate-900">
+      Finalisasi CV
+    </p>
+
+    <p className="mt-0.5 truncate text-[11px] text-slate-400">
+      {saveState === "saving"
+        ? "Sedang menyimpan..."
+        : saveState === "saved"
+          ? "Tersimpan di cloud"
+          : saveState === "error"
+            ? "Gagal tersimpan"
+            : "Draft tersimpan lokal"}
+    </p>
+  </div>
+
+        <div className="mx-auto hidden items-center gap-2 text-sm text-slate-500 lg:flex">
           <span className={`h-2.5 w-2.5 rounded-full ${saveState === "error" ? "bg-rose-500" : saveState === "saving" ? "animate-pulse bg-amber-400" : "bg-emerald-500"}`} />
           {saveState === "saving" ? "Menyimpan..." : saveState === "saved" ? "Tersimpan di cloud" : saveState === "error" ? "Gagal tersimpan" : "Draft tersimpan lokal"}
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
-          <button type="button" disabled={saving} onClick={() => saveToCloud()} className="hidden rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:block">{saving ? "Menyimpan..." : "Simpan"}</button>
-          <button type="button" disabled={exporting} onClick={downloadPDF} className="rounded-xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-100 hover:bg-sky-600 disabled:opacity-60">{exporting ? "Membuat PDF..." : "Unduh PDF"}</button>
+        <div className="ml-auto hidden items-center gap-3 lg:flex">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => saveToCloud()}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {saving ? "Menyimpan..." : "Simpan"}
+          </button>
+
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={requestDownload}
+            className="rounded-xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-100 hover:bg-sky-600 disabled:opacity-60"
+          >
+            {exporting ? "Membuat PDF..." : "Unduh PDF"}
+          </button>
         </div>
+
+        <button
+          data-mobile-save-button="true"
+          type="button"
+          disabled={saving}
+          onClick={() => saveToCloud()}
+          className="ml-auto shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-sky-600 shadow-sm disabled:opacity-50 lg:hidden"
+        >
+          {saving ? "..." : "Simpan"}
+        </button>
       </header>
 
-      <div className="grid min-h-[calc(100vh-80px)] lg:grid-cols-[112px_340px_minmax(680px,2fr)]">
-        <nav className="border-r border-slate-200 bg-white px-3 py-5">
+      <div className="min-h-[calc(100dvh-64px)] lg:grid lg:min-h-[calc(100vh-80px)] lg:grid-cols-[112px_340px_minmax(680px,2fr)]">
+        <nav className="hidden border-r border-slate-200 bg-white px-3 py-5 lg:block">
           <div className="sticky top-24 space-y-2">
             {PANELS.map((item) => (
               <button key={item.id} type="button" onClick={() => setActivePanel(item.id)} className={`flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-4 text-center text-xs font-medium transition ${activePanel === item.id ? "bg-sky-50 text-sky-600" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}>
@@ -2177,12 +2581,12 @@ const spellIssues = useMemo(() => {
           </div>
         </nav>
 
-        <section className="border-r border-slate-200 bg-white p-6 lg:h-[calc(100vh-80px)] lg:overflow-y-auto">
+        <section className="hidden border-r border-slate-200 bg-white p-6 lg:block lg:h-[calc(100vh-80px)] lg:overflow-y-auto">
           {renderActivePanel()}
         </section>
 
-        <main className="overflow-auto bg-slate-200 px-5 py-6 xl:px-8">
-          <div className="mx-auto mb-5 flex w-full max-w-[1240px] items-center justify-between">
+        <main className="relative min-w-0 overflow-x-hidden bg-slate-200 px-3 pb-32 pt-4 sm:px-5 sm:py-6 lg:overflow-auto lg:px-5 lg:pb-6 xl:px-8">
+          <div className="mx-auto mb-5 hidden w-full max-w-[1240px] items-center justify-between lg:flex">
             <input value={documentName} onChange={(event) => setDocumentName(event.target.value)} className="max-w-sm border-0 bg-transparent text-sm font-semibold text-sky-600 outline-none" aria-label="Nama dokumen" />
             <div className="flex items-center gap-3">
               <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
@@ -2191,25 +2595,229 @@ const spellIssues = useMemo(() => {
               <select value={data.design.language} onChange={(event) => updateDesign("language", event.target.value)} className="rounded-xl border-0 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none"><option value="ID">Indonesia</option><option value="EN">English</option></select>
             </div>
           </div>
-          <div className="mx-auto w-full max-w-[1240px]">
+          <div
+            data-mobile-document-toolbar="true"
+            className="mx-auto mb-3 flex w-full min-w-0 max-w-[794px] items-center gap-2 lg:hidden"
+          >
+            <input
+              value={documentName}
+              onChange={(event) =>
+                setDocumentName(event.target.value)
+              }
+              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-sky-600 shadow-sm outline-none"
+              aria-label="Nama dokumen mobile"
+            />
+
+            <select
+              value={data.design.language}
+              onChange={(event) =>
+                updateDesign("language", event.target.value)
+              }
+              className="shrink-0 rounded-xl border-0 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 shadow-sm outline-none"
+              aria-label="Bahasa CV"
+            >
+              <option value="ID">ID</option>
+              <option value="EN">EN</option>
+            </select>
+          </div>
+
+          <div className="mx-auto w-full min-w-0 max-w-[1240px]">
             <ProfessionalCVPreview
+              key={
+                isMobile
+                  ? "mobile-final-preview"
+                  : "desktop-final-preview"
+              }
               ref={cvRef}
               refreshKey={data}
               sourceWidth={794}
-              viewportHeight={820}
-              minZoom={0.5}
+              viewportHeight={
+                isMobile
+                  ? mobileSheetOpen
+                    ? 285
+                    : 640
+                  : 820
+              }
+              minZoom={isMobile ? 0.35 : 0.5}
               maxZoom={1.25}
               defaultZoom={1}
-              defaultMode="actual-size"
+              defaultMode={
+                isMobile ? "fit-width" : "actual-size"
+              }
             >
-              <TemplatePreview data={data} />
+              <div className="relative w-full">
+                <TemplatePreview data={data} />
+
+                <div
+                  data-mobile-preview-watermark="true"
+                  data-cv-watermark="true"
+                  data-html2canvas-ignore="true"
+                  className="pointer-events-none absolute inset-0 z-[60] select-none overflow-hidden lg:hidden"
+                  aria-hidden="true"
+                >
+                  <div className="grid h-full w-full grid-cols-2 grid-rows-4">
+                    {Array.from({ length: 8 }).map(
+                      (_, watermarkIndex) => (
+                        <div
+                          key={`cv-kilat-watermark-${watermarkIndex}`}
+                          className="flex items-center justify-center overflow-hidden"
+                        >
+                          <span className="-rotate-[32deg] whitespace-nowrap text-[27px] font-black tracking-[0.16em] text-slate-700/20">
+                            CV KILAT
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
             </ProfessionalCVPreview>
           </div>
         </main>
       </div>
 
+      <div
+        data-mobile-final-actions="true"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_40px_rgba(15,23,42,0.16)] backdrop-blur lg:hidden"
+      >
+        <div className="mx-auto grid w-full max-w-md grid-cols-[1fr_1fr_1.35fr] gap-2">
+          <button
+            type="button"
+            onClick={() => onBack(data)}
+            className="rounded-2xl border border-slate-200 bg-white px-2 py-3 text-xs font-extrabold text-slate-700 transition active:scale-[0.98]"
+          >
+            Edit Data
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openMobilePanel("template")}
+            className="rounded-2xl border border-slate-200 bg-white px-2 py-3 text-xs font-extrabold text-slate-700 transition active:scale-[0.98]"
+          >
+            Atur Desain
+          </button>
+
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={requestDownload}
+            className="rounded-2xl bg-sky-500 px-3 py-3 text-xs font-extrabold text-white shadow-lg shadow-sky-500/20 transition active:scale-[0.98] disabled:opacity-60"
+          >
+            {exporting ? "Membuat PDF..." : "Unduh CV"}
+          </button>
+        </div>
+      </div>
+
+      {mobileSheetOpen ? (
+        <div
+          data-live-design-panel="true"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-[80] lg:hidden"
+        >
+
+          <section
+            role="region"
+            aria-label="Live editor desain CV"
+            className="pointer-events-auto relative flex h-[48dvh] min-h-[300px] max-h-[470px] min-w-0 flex-col overflow-hidden rounded-t-[28px] border-t border-slate-200 bg-white shadow-[0_-18px_60px_rgba(15,23,42,0.18)]"
+          >
+            <div className="relative flex items-center justify-center px-4 pb-1 pt-3">
+              <span className="h-1.5 w-12 rounded-full bg-slate-300" />
+
+              <span className="absolute right-4 text-[10px] font-bold text-emerald-600">
+                ● LIVE
+              </span>
+            </div>
+
+            <div className="flex min-w-0 items-center justify-between border-b border-slate-100 px-4 pb-3 pt-2">
+              <div className="min-w-0">
+                <p className="truncate text-base font-extrabold text-slate-900">
+                  Atur Desain CV
+                </p>
+
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Edit pengaturan sambil melihat hasilnya pada preview.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileSheetOpen(false)}
+                className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-bold text-slate-500"
+                aria-label="Tutup pengaturan desain"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="overflow-x-auto border-b border-slate-100 px-4 py-3">
+              <div className="flex min-w-max gap-2">
+                {PANELS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() =>
+                      setActivePanel(item.id)
+                    }
+                    className={
+                      activePanel === item.id
+                        ? "rounded-xl bg-sky-500 px-3 py-2 text-xs font-bold text-white shadow-md shadow-sky-500/20"
+                        : "rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600"
+                    }
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="min-h-0 min-w-0 flex-1 overscroll-contain overflow-x-hidden overflow-y-auto px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4">
+              {renderActivePanel()}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+<PaymentPackageModal
+        open={paymentOpen}
+        busy={paymentBusy}
+        message={paymentMessage}
+        sandbox={
+          String(
+            import.meta.env
+              .VITE_MIDTRANS_IS_PRODUCTION ||
+              "false",
+          ).toLowerCase() !== "true"
+        }
+        onClose={() => {
+          if (!paymentBusy) {
+            setPaymentOpen(false);
+            setPaymentMessage("");
+          }
+        }}
+        onChoosePlan={startMidtransPayment}
+        onCheckAccess={async () => {
+          try {
+            const targetCvId =
+              paymentCvId ||
+              (await preparePaymentCv());
+
+            if (!targetCvId) return;
+
+            setPaymentCvId(targetCvId);
+
+            await verifyAccessAndDownload(
+              targetCvId,
+            );
+          } catch (error) {
+            setPaymentMessage(
+              error?.message ||
+                "Akses belum dapat diperiksa.",
+            );
+          }
+        }}
+      />
+
       {cameraOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-5 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm sm:p-5">
           <div className="w-full max-w-2xl rounded-3xl bg-white p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-bold text-slate-900">Ambil Foto</h2><p className="mt-1 text-sm text-slate-500">Posisikan wajah di tengah kamera.</p></div><button type="button" onClick={closeCamera} className="rounded-xl p-3 text-slate-500 hover:bg-slate-100">✕</button></div>
             {cameraError ? <div className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{cameraError}</div> : <video

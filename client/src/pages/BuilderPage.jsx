@@ -303,7 +303,8 @@ export default function BuilderPage({
   onContinueDesign = () => {},
 }) {
   const [step, setStep] = useState(0);
-  const [template, setTemplate] = useState("modern");
+    const [mobileView, setMobileView] = useState("form");
+const [template, setTemplate] = useState("modern");
   const [language, setLanguage] = useState("ID");
   const [form, setForm] = useState(defaultForm);
   const [generatingKey, setGeneratingKey] = useState("");
@@ -573,7 +574,7 @@ export default function BuilderPage({
           <div className="space-y-5">
             {form.experiences.map((item, index) => (
               <div key={item.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-4">
+                <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 sm:px-5 sm:py-4">
                   <button type="button" onClick={() => updateArrayItem("experiences", item.id, "open", !item.open)} className="text-left">
                     <p className="font-semibold text-slate-800">{item.jobTitle || `Pengalaman ${index + 1}`}</p>
                     <p className="text-xs text-slate-400">{item.employer || "Nama perusahaan"}</p>
@@ -581,12 +582,12 @@ export default function BuilderPage({
                   <div className="flex gap-2"><button type="button" onClick={() => updateArrayItem("experiences", item.id, "open", !item.open)} className="rounded-lg px-2 py-1 hover:bg-white">{item.open ? "⌃" : "⌄"}</button><button type="button" onClick={() => removeArrayItem("experiences", item.id)} disabled={form.experiences.length === 1} className="rounded-lg px-2 py-1 text-rose-500 hover:bg-rose-50 disabled:opacity-30">🗑</button></div>
                 </div>
                 {item.open ? (
-                  <div className="p-5">
+                  <div className="p-4 sm:p-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <label><span className={labelClass}>Judul pekerjaan</span><input className={inputClass} value={item.jobTitle} onChange={(e) => updateArrayItem("experiences", item.id, "jobTitle", e.target.value)} placeholder="Warehouse Manager" /></label>
                       <label><span className={labelClass}>Tempat kerja</span><input className={inputClass} value={item.employer} onChange={(e) => updateArrayItem("experiences", item.id, "employer", e.target.value)} placeholder="Nama perusahaan" /></label>
                       <label><span className={labelClass}>Lokasi</span><input className={inputClass} value={item.location} onChange={(e) => updateArrayItem("experiences", item.id, "location", e.target.value)} placeholder="Jakarta, Indonesia" /></label>
-                      <div className="grid grid-cols-2 gap-3"><label><span className={labelClass}>Tanggal mulai</span><input type="month" className={inputClass} value={item.startDate} onChange={(e) => updateArrayItem("experiences", item.id, "startDate", e.target.value)} /></label><label><span className={labelClass}>Tanggal akhir</span><input type="month" disabled={item.current} className={inputClass} value={item.current ? "" : item.endDate} onChange={(e) => updateArrayItem("experiences", item.id, "endDate", e.target.value)} /></label></div>
+                      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2"><label><span className={labelClass}>Tanggal mulai</span><input type="month" className={inputClass} value={item.startDate} onChange={(e) => updateArrayItem("experiences", item.id, "startDate", e.target.value)} /></label><label><span className={labelClass}>Tanggal akhir</span><input type="month" disabled={item.current} className={inputClass} value={item.current ? "" : item.endDate} onChange={(e) => updateArrayItem("experiences", item.id, "endDate", e.target.value)} /></label></div>
                     </div>
                     <label className="mt-4 flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={item.current} onChange={(e) => updateArrayItem("experiences", item.id, "current", e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-sky-500" />Saat ini masih bekerja</label>
                     <div className="mt-5"><span className={labelClass}>Deskripsi</span><RichToolbar onInsert={(type) => insertFormatting("experiences", item.id, "description", `experience-${item.id}`, type)} onGenerate={() => generateExperienceDraft(item)} generating={generatingKey === `experience-${item.id}`} /><textarea ref={registerEditorRef(`experience-${item.id}`)} className={`${inputClass} min-h-44 rounded-t-none`} value={item.description} onChange={(e) => updateArrayItem("experiences", item.id, "description", e.target.value)} onKeyDown={(event) => handleAutoListEnter(event, (nextValue) => updateArrayItem("experiences", item.id, "description", nextValue))} placeholder="Tuliskan pencapaian dan tanggung jawab utama..." /></div>
@@ -607,9 +608,9 @@ export default function BuilderPage({
           <div className="space-y-5">
             {form.education.map((item, index) => (
               <div key={item.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-4"><button type="button" onClick={() => updateArrayItem("education", item.id, "open", !item.open)} className="text-left"><p className="font-semibold text-slate-800">{item.school || `Pendidikan ${index + 1}`}</p><p className="text-xs text-slate-400">{item.degree || "Gelar atau jurusan"}</p></button><div className="flex gap-2"><button type="button" onClick={() => updateArrayItem("education", item.id, "open", !item.open)} className="rounded-lg px-2 py-1 hover:bg-white">{item.open ? "⌃" : "⌄"}</button><button type="button" onClick={() => removeArrayItem("education", item.id)} disabled={form.education.length === 1} className="rounded-lg px-2 py-1 text-rose-500 hover:bg-rose-50 disabled:opacity-30">🗑</button></div></div>
+                <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 sm:px-5 sm:py-4"><button type="button" onClick={() => updateArrayItem("education", item.id, "open", !item.open)} className="text-left"><p className="font-semibold text-slate-800">{item.school || `Pendidikan ${index + 1}`}</p><p className="text-xs text-slate-400">{item.degree || "Gelar atau jurusan"}</p></button><div className="flex gap-2"><button type="button" onClick={() => updateArrayItem("education", item.id, "open", !item.open)} className="rounded-lg px-2 py-1 hover:bg-white">{item.open ? "⌃" : "⌄"}</button><button type="button" onClick={() => removeArrayItem("education", item.id)} disabled={form.education.length === 1} className="rounded-lg px-2 py-1 text-rose-500 hover:bg-rose-50 disabled:opacity-30">🗑</button></div></div>
                 {item.open ? (
-                  <div className="p-5"><div className="grid gap-4 md:grid-cols-2"><label><span className={labelClass}>Nama sekolah</span><input className={inputClass} value={item.school} onChange={(e) => updateArrayItem("education", item.id, "school", e.target.value)} placeholder="Universitas Indonesia" /></label><label><span className={labelClass}>Lokasi</span><input className={inputClass} value={item.location} onChange={(e) => updateArrayItem("education", item.id, "location", e.target.value)} placeholder="Jakarta" /></label><label><span className={labelClass}>Gelar</span><input className={inputClass} value={item.degree} onChange={(e) => updateArrayItem("education", item.id, "degree", e.target.value)} placeholder="Sarjana Manajemen" /></label><div className="grid grid-cols-2 gap-3"><label><span className={labelClass}>Tanggal mulai</span><input type="month" className={inputClass} value={item.startDate} onChange={(e) => updateArrayItem("education", item.id, "startDate", e.target.value)} /></label><label><span className={labelClass}>Tanggal akhir</span><input type="month" disabled={item.current} className={inputClass} value={item.current ? "" : item.endDate} onChange={(e) => updateArrayItem("education", item.id, "endDate", e.target.value)} /></label></div></div><label className="mt-4 flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={item.current} onChange={(e) => updateArrayItem("education", item.id, "current", e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-sky-500" />Saya masih terdaftar</label><div className="mt-5"><span className={labelClass}>Deskripsi</span><RichToolbar onInsert={(type) => insertFormatting("education", item.id, "description", `education-${item.id}`, type)} onGenerate={() => generateEducationDraft(item)} generating={generatingKey === `education-${item.id}`} /><textarea ref={registerEditorRef(`education-${item.id}`)} className={`${inputClass} min-h-40 rounded-t-none`} value={item.description} onChange={(e) => updateArrayItem("education", item.id, "description", e.target.value)} onKeyDown={(event) => handleAutoListEnter(event, (nextValue) => updateArrayItem("education", item.id, "description", nextValue))} placeholder="Prestasi, organisasi, atau bidang studi..." /></div></div>
+                  <div className="p-4 sm:p-5"><div className="grid gap-4 md:grid-cols-2"><label><span className={labelClass}>Nama sekolah</span><input className={inputClass} value={item.school} onChange={(e) => updateArrayItem("education", item.id, "school", e.target.value)} placeholder="Universitas Indonesia" /></label><label><span className={labelClass}>Lokasi</span><input className={inputClass} value={item.location} onChange={(e) => updateArrayItem("education", item.id, "location", e.target.value)} placeholder="Jakarta" /></label><label><span className={labelClass}>Gelar</span><input className={inputClass} value={item.degree} onChange={(e) => updateArrayItem("education", item.id, "degree", e.target.value)} placeholder="Sarjana Manajemen" /></label><div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2"><label><span className={labelClass}>Tanggal mulai</span><input type="month" className={inputClass} value={item.startDate} onChange={(e) => updateArrayItem("education", item.id, "startDate", e.target.value)} /></label><label><span className={labelClass}>Tanggal akhir</span><input type="month" disabled={item.current} className={inputClass} value={item.current ? "" : item.endDate} onChange={(e) => updateArrayItem("education", item.id, "endDate", e.target.value)} /></label></div></div><label className="mt-4 flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={item.current} onChange={(e) => updateArrayItem("education", item.id, "current", e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-sky-500" />Saya masih terdaftar</label><div className="mt-5"><span className={labelClass}>Deskripsi</span><RichToolbar onInsert={(type) => insertFormatting("education", item.id, "description", `education-${item.id}`, type)} onGenerate={() => generateEducationDraft(item)} generating={generatingKey === `education-${item.id}`} /><textarea ref={registerEditorRef(`education-${item.id}`)} className={`${inputClass} min-h-40 rounded-t-none`} value={item.description} onChange={(e) => updateArrayItem("education", item.id, "description", e.target.value)} onKeyDown={(event) => handleAutoListEnter(event, (nextValue) => updateArrayItem("education", item.id, "description", nextValue))} placeholder="Prestasi, organisasi, atau bidang studi..." /></div></div>
                 ) : null}
               </div>
             ))}
@@ -625,7 +626,7 @@ export default function BuilderPage({
           <SectionTitle title="Keahlian" description="Tambahkan keahlian profesional yang paling relevan dengan posisi tujuan." />
           <label className="mb-6 flex items-center gap-3 text-sm font-medium text-slate-700"><button type="button" onClick={() => setForm((current) => ({ ...current, showSkillLevel: !current.showSkillLevel }))} className={`relative h-7 w-12 rounded-full transition ${form.showSkillLevel ? "bg-sky-500" : "bg-slate-300"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${form.showSkillLevel ? "left-6" : "left-1"}`} /></button>Tampilkan level pengalaman</label>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><h3 className="font-semibold text-slate-800">✨ Keahlian yang disarankan</h3><span className="text-xs text-slate-400">Klik untuk menambahkan</span></div><div className="flex flex-wrap gap-2">{suggestedSkills.map((name) => <button key={name} type="button" onClick={() => { if (!form.skills.some((skill) => skill.name === name)) setForm((current) => ({ ...current, skills: [...current.skills, emptySkill(name, 3)] })); }} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700">{name}</button>)}</div></div>
-          <div className="mt-5 space-y-4">{form.skills.map((skill) => <div key={skill.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start gap-4"><div className="flex-1"><label><span className={labelClass}>Keahlian</span><input className={inputClass} value={skill.name} onChange={(e) => updateArrayItem("skills", skill.id, "name", e.target.value)} placeholder="Contoh: Microsoft Excel" /></label>{form.showSkillLevel ? <div className="mt-4"><div className="mb-2 flex justify-between text-xs font-medium text-slate-500"><span>Tingkat</span><span>{levelNames[skill.level]}</span></div><input type="range" min="1" max="5" value={skill.level} onChange={(e) => updateArrayItem("skills", skill.id, "level", Number(e.target.value))} className="w-full accent-sky-500" /><div className="mt-2"><SkillBars level={skill.level} /></div></div> : null}</div><button type="button" onClick={() => removeArrayItem("skills", skill.id)} className="mt-7 rounded-lg p-2 text-rose-500 hover:bg-rose-50">🗑</button></div></div>)}</div>
+          <div className="mt-5 space-y-4">{form.skills.map((skill) => <div key={skill.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start gap-4"><div className="min-w-0 flex-1"><label><span className={labelClass}>Keahlian</span><input className={inputClass} value={skill.name} onChange={(e) => updateArrayItem("skills", skill.id, "name", e.target.value)} placeholder="Contoh: Microsoft Excel" /></label>{form.showSkillLevel ? <div className="mt-4"><div className="mb-2 flex justify-between text-xs font-medium text-slate-500"><span>Tingkat</span><span>{levelNames[skill.level]}</span></div><input type="range" min="1" max="5" value={skill.level} onChange={(e) => updateArrayItem("skills", skill.id, "level", Number(e.target.value))} className="w-full accent-sky-500" /><div className="mt-2"><SkillBars level={skill.level} /></div></div> : null}</div><button type="button" onClick={() => removeArrayItem("skills", skill.id)} className="mt-7 rounded-lg p-2 text-rose-500 hover:bg-rose-50">🗑</button></div></div>)}</div>
           <button type="button" onClick={() => setForm((current) => ({ ...current, skills: [...current.skills, emptySkill()] }))} className="mt-5 font-semibold text-sky-600 hover:text-sky-700">＋ Tambahkan keahlian</button>
         </>
       );
@@ -662,10 +663,41 @@ export default function BuilderPage({
 
   return (
     <div className="min-h-screen bg-slate-100 lg:h-screen lg:overflow-hidden">
+      <div className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur lg:hidden">
+        <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setMobileView("form")}
+            className={
+              mobileView === "form"
+                ? "rounded-xl bg-white px-3 py-2.5 text-sm font-bold text-sky-600 shadow-sm transition"
+                : "rounded-xl px-3 py-2.5 text-sm font-bold text-slate-500 transition hover:text-slate-700"
+            }
+          >
+            Edit Data
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileView("preview")}
+            className={
+              mobileView === "preview"
+                ? "rounded-xl bg-white px-3 py-2.5 text-sm font-bold text-sky-600 shadow-sm transition"
+                : "rounded-xl px-3 py-2.5 text-sm font-bold text-slate-500 transition hover:text-slate-700"
+            }
+          >
+            Preview CV
+          </button>
+        </div>
+      </div>
       <div className="grid min-h-screen lg:h-screen lg:grid-cols-[minmax(340px,1fr)_minmax(680px,2fr)]">
-        <section className="flex min-h-screen flex-col border-r border-slate-200 bg-white lg:h-screen lg:min-h-0">
-          <div className="border-b border-slate-200 bg-white px-4 py-2.5 lg:px-5">
-            <div className="relative flex justify-between gap-2 overflow-x-auto pb-1">
+        <section
+          className={`${
+            mobileView === "preview" ? "hidden" : "flex"
+          } min-w-0 min-h-[calc(100dvh-61px)] flex-col border-r border-slate-200 bg-white lg:flex lg:h-screen lg:min-h-0`}
+        >
+          <div className="sticky top-[61px] z-30 border-b border-slate-200 bg-white px-4 py-2.5 lg:static lg:px-5">
+            <div className="relative flex min-w-0 justify-between gap-4 overflow-x-auto overscroll-x-contain pb-2">
               <div className="absolute left-4 right-4 top-[27px] h-px bg-slate-200" />
               {STEPS.map((item, index) => (
                 <button key={item} type="button" onClick={() => setStep(index)} className="relative z-10 min-w-max px-1 text-center">
@@ -676,23 +708,27 @@ export default function BuilderPage({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-4 lg:px-5">
-            <div className="mx-auto max-w-[600px]">{renderStepContent()}</div>
+          <div className="min-w-0 flex-1 overflow-visible bg-slate-50 px-3 py-4 sm:px-4 lg:overflow-y-auto lg:px-5">
+            <div className="mx-auto min-w-0 max-w-[600px]">{renderStepContent()}</div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-2.5 shadow-[0_-8px_24px_rgba(15,23,42,0.04)] lg:px-5">
-            <button type="button" onClick={goPrevious} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">← Kembali</button>
-            {step < STEPS.length - 1 ? <button type="button" onClick={goNext} className="rounded-lg bg-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 hover:bg-sky-600">Berikutnya: {STEPS[step + 1]} →</button> : <button type="button" onClick={handleContinueDesign} className="rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-200">Lanjut ke Desain →</button>}
+          <div className="sticky bottom-0 z-30 flex min-w-0 items-center justify-between gap-2 border-t border-slate-200 bg-white/95 px-3 py-2.5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:px-4 lg:static lg:px-5">
+            <button type="button" onClick={goPrevious} className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:px-4">← Kembali</button>
+            {step < STEPS.length - 1 ? <button type="button" onClick={goNext} className="min-w-0 flex-1 rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 hover:bg-sky-600 sm:flex-none sm:px-5">Berikutnya<span className="hidden sm:inline">: {STEPS[step + 1]}</span> →</button> : <button type="button" onClick={handleContinueDesign} className="min-w-0 flex-1 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-200 sm:flex-none sm:px-5">Lanjut ke Desain →</button>}
           </div>
         </section>
 
-        <aside className="bg-slate-200 px-5 py-5 lg:h-screen lg:overflow-y-auto lg:px-7">
-          <div className="mx-auto max-w-[1240px]">
-            <div className="mb-5 flex flex-wrap items-center gap-3">
-              <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"><span className={`mr-2 rounded-lg px-2 py-1 font-bold ${score >= 80 ? "bg-emerald-100 text-emerald-700" : score >= 50 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>{score}%</span>Skor resume Anda</div>
-              <select value={template} onChange={(e) => setTemplate(e.target.value)} className="rounded-xl border-0 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none"><option value="modern">Template Modern</option><option value="ats">Template ATS</option><option value="simple">Template Simple</option></select>
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="rounded-xl border-0 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none"><option value="ID">Indonesia</option><option value="EN">English</option></select>
-              <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
+        <aside
+          className={`${
+            mobileView === "form" ? "hidden" : "block"
+          } min-w-0 overflow-x-hidden bg-slate-200 px-3 py-4 sm:px-5 sm:py-5 lg:block lg:h-screen lg:overflow-y-auto lg:px-7`}
+        >
+          <div className="mx-auto min-w-0 max-w-[1240px]">
+            <div className="mb-4 grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3 lg:mb-5">
+              <div className="col-span-2 min-w-0 rounded-xl bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm sm:col-span-1 sm:px-4"><span className={`mr-2 rounded-lg px-2 py-1 font-bold ${score >= 80 ? "bg-emerald-100 text-emerald-700" : score >= 50 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>{score}%</span>Skor resume Anda</div>
+              <select value={template} onChange={(e) => setTemplate(e.target.value)} className="block w-full min-w-0 rounded-xl border-0 bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none sm:w-auto sm:px-4"><option value="modern">Template Modern</option><option value="ats">Template ATS</option><option value="simple">Template Simple</option></select>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="block w-full min-w-0 rounded-xl border-0 bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none sm:w-auto sm:px-4"><option value="ID">Indonesia</option><option value="EN">English</option></select>
+              <span className="col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-xs font-bold text-slate-600 shadow-sm sm:col-span-1">
                 Preview besar • Tajam
               </span>
             </div>
@@ -700,11 +736,11 @@ export default function BuilderPage({
             <ProfessionalCVPreview
               refreshKey={form}
               sourceWidth={720}
-              viewportHeight={820}
+              viewportHeight={mobileView === "preview" ? 620 : 820}
               minZoom={0.5}
               maxZoom={1.25}
               defaultZoom={1}
-              defaultMode="actual-size"
+              defaultMode={mobileView === "preview" ? "fit-width" : "actual-size"}
             >
               <div
                 className={`relative min-h-[940px] w-[720px] overflow-hidden bg-white p-10 text-slate-800 ${paperClass}`}
