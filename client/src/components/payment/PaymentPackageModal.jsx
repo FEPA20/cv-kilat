@@ -9,7 +9,7 @@ const PACKAGES = [
     benefits: [
       "1 CV premium",
       "1 surat lamaran premium",
-      "PDF tanpa watermark",
+      "PDF & DOCX tanpa watermark",
       "Revisi dan unduh ulang 7 hari",
     ],
   },
@@ -23,7 +23,7 @@ const PACKAGES = [
     benefits: [
       "3 CV berbeda",
       "3 surat lamaran berbeda",
-      "PDF tanpa watermark",
+      "PDF & DOCX tanpa watermark",
       "Kredit berlaku 60 hari",
     ],
   },
@@ -37,7 +37,7 @@ const PACKAGES = [
     benefits: [
       "CV premium tanpa batas wajar",
       "Surat lamaran tanpa batas wajar",
-      "PDF tanpa watermark",
+      "PDF & DOCX tanpa watermark",
       "Akses aktif 30 hari",
     ],
   },

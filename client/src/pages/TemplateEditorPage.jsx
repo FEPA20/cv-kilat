@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
 import html2canvas from "html2canvas-pro";
 import { supabase } from "../lib/supabase";
 import ProfessionalCVPreview from "../components/ProfessionalCVPreview";
@@ -857,6 +858,315 @@ function RangeControl({ label, min, max, step = 1, value, onChange, suffix = "" 
   );
 }
 
+
+/*
+ * CK-PDF-DOCX-01
+ * Renderer ekspor dibuat terpisah dari preview layar.
+ * Preview mobile boleh di-zoom, tetapi sumber PDF selalu 794 px.
+ */
+async function mountCvForExport(data) {
+  const host =
+    document.createElement("div");
+
+  host.setAttribute(
+    "aria-hidden",
+    "true",
+  );
+
+  Object.assign(host.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    width: "794px",
+    minHeight: "1123px",
+    pointerEvents: "none",
+    zIndex: "-2147483647",
+    background:
+      data?.design?.pageBackground ||
+      "#ffffff",
+  });
+
+  document.body.appendChild(host);
+
+  const root = createRoot(host);
+
+  root.render(
+    <div
+      data-cv-export-root="true"
+      style={{
+        width: "794px",
+        minWidth: "794px",
+        maxWidth: "794px",
+        transform: "none",
+        zoom: 1,
+      }}
+    >
+      <TemplatePreview data={data} />
+    </div>,
+  );
+
+  await new Promise((resolve) =>
+    requestAnimationFrame(() =>
+      requestAnimationFrame(resolve),
+    ),
+  );
+
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
+  const element =
+    host.querySelector(
+      '[data-cv-export-root="true"]',
+    );
+
+  if (!element) {
+    root.unmount();
+    host.remove();
+
+    throw new Error(
+      "Renderer ekspor CV tidak berhasil dibuat.",
+    );
+  }
+
+  const images = Array.from(
+    element.querySelectorAll("img"),
+  );
+
+  await Promise.all(
+    images.map(
+      (image) =>
+        new Promise((resolve) => {
+          if (
+            image.complete &&
+            image.naturalWidth > 0
+          ) {
+            resolve();
+            return;
+          }
+
+          const finish = () => resolve();
+
+          image.addEventListener(
+            "load",
+            finish,
+            { once: true },
+          );
+
+          image.addEventListener(
+            "error",
+            finish,
+            { once: true },
+          );
+
+          setTimeout(finish, 5000);
+        }),
+    ),
+  );
+
+  return {
+    element,
+
+    cleanup: () => {
+      try {
+        root.unmount();
+      } catch {
+        // Root mungkin sudah dilepas browser.
+      }
+
+      host.remove();
+    },
+  };
+}
+
+function safeDocumentFilename(value) {
+  return (
+    String(value || "CV_Kilat")
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .replace(/\s+/g, "_") ||
+    "CV_Kilat"
+  );
+}
+
+function triggerBlobDownload(
+  blob,
+  filename,
+) {
+  const url = URL.createObjectURL(blob);
+  const anchor =
+    document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1500);
+}
+
+async function resolveDocxImage(source) {
+  if (!source) return null;
+
+  if (source.startsWith("data:")) {
+    const match = source.match(
+      /^data:([^;,]+);base64,(.+)$/i,
+    );
+
+    if (!match) return null;
+
+    const mime = match[1].toLowerCase();
+    const binary = atob(match[2]);
+    const bytes =
+      new Uint8Array(binary.length);
+
+    for (
+      let index = 0;
+      index < binary.length;
+      index += 1
+    ) {
+      bytes[index] =
+        binary.charCodeAt(index);
+    }
+
+    return {
+      data: bytes,
+      type: mime.includes("png")
+        ? "png"
+        : "jpg",
+    };
+  }
+
+  const response = await fetch(source);
+
+  if (!response.ok) {
+    throw new Error(
+      "Foto DOCX gagal diunduh.",
+    );
+  }
+
+  const mime = String(
+    response.headers.get("content-type") ||
+      "",
+  ).toLowerCase();
+
+  return {
+    data: new Uint8Array(
+      await response.arrayBuffer(),
+    ),
+    type: mime.includes("png")
+      ? "png"
+      : "jpg",
+  };
+}
+
+function DownloadFormatModal({
+  open,
+  busy = false,
+  selected = "pdf",
+  onClose,
+  onChoose,
+}) {
+  if (!open) return null;
+
+  const options = [
+    {
+      id: "pdf",
+      icon: "PDF",
+      title: "PDF",
+      subtitle:
+        "Desain tetap, siap dikirim ke perusahaan.",
+    },
+    {
+      id: "docx",
+      icon: "W",
+      title: "Word DOCX",
+      subtitle:
+        "Teks dapat diedit dan ramah ATS.",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[145] flex items-end justify-center bg-slate-950/65 p-0 backdrop-blur-sm sm:items-center sm:p-5">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        disabled={busy}
+        onClick={
+          busy ? undefined : onClose
+        }
+        aria-label="Tutup pilihan format"
+      />
+
+      <section className="relative w-full max-w-lg rounded-t-[28px] bg-white p-5 shadow-2xl sm:rounded-[28px] sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black text-slate-900">
+              Pilih format CV
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Akses premium yang sama dapat digunakan
+              untuk PDF dan Word pada CV ini.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-bold text-slate-500 disabled:opacity-40"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                onChoose(option.id)
+              }
+              className={
+                selected === option.id
+                  ? "rounded-2xl border-2 border-sky-500 bg-sky-50 p-5 text-left ring-4 ring-sky-100 disabled:opacity-50"
+                  : "rounded-2xl border-2 border-slate-200 bg-white p-5 text-left transition hover:border-sky-300 hover:bg-sky-50 disabled:opacity-50"
+              }
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-500 text-sm font-black text-white">
+                {option.icon}
+              </span>
+
+              <span className="mt-4 block font-black text-slate-900">
+                {option.title}
+              </span>
+
+              <span className="mt-1 block text-xs leading-5 text-slate-500">
+                {option.subtitle}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-5 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
+          DOCX memakai layout profesional yang dapat
+          diedit. Desainnya tidak selalu identik dengan
+          template PDF yang kompleks.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+
 export default function TemplateEditorPage({
   user = null,
   initialData = null,
@@ -888,6 +1198,8 @@ export default function TemplateEditorPage({
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState("");
   const [paymentCvId, setPaymentCvId] = useState(null);
+  const [formatOpen, setFormatOpen] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState("pdf");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -904,6 +1216,7 @@ const [photoProcessingMode, setPhotoProcessingMode] =
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const cvRef = useRef(null);
+  const downloadFormatRef = useRef("pdf");
 
   useEffect(() => {
     if (!initialData) return;
@@ -1048,45 +1361,25 @@ const downloadPDF = async () => {
     return;
   }
 
-  const previewElement = cvRef.current;
-
-  if (!previewElement) {
-    alert("❌ Preview CV belum siap. Silakan tunggu sebentar.");
-    return;
-  }
-
   setExporting(true);
 
-  const watermarkElements = Array.from(
-    previewElement.querySelectorAll(
-      '[data-cv-watermark="true"]'
-    )
-  );
-
-  const previousVisibility = watermarkElements.map(
-    (element) => element.style.visibility
-  );
+  let releaseExport = () => {};
 
   try {
-    // Penyimpanan cloud tidak boleh menghentikan pembuatan PDF.
-    // Bila gagal, PDF tetap dicoba dibuat dari data yang tampil.
+    /*
+     * Simpan tetap dicoba, tetapi kegagalan simpan
+     * tidak boleh merusak proses ekspor lokal.
+     */
     await saveToCloud({ silent: true });
 
-    if (document.fonts?.ready) {
-      await document.fonts.ready;
-    }
+    const mounted =
+      await mountCvForExport(data);
 
-    // Sembunyikan watermark pada DOM hanya selama proses capture.
-    watermarkElements.forEach((element) => {
-      element.style.visibility = "hidden";
-    });
+    const previewElement =
+      mounted.element;
 
-    // Tunggu browser menerapkan perubahan style.
-    await new Promise((resolve) =>
-      requestAnimationFrame(() =>
-        requestAnimationFrame(resolve)
-      )
-    );
+    releaseExport =
+      mounted.cleanup;
 
     // CK-TPL-04: template referensi ditangkap lebih tajam.
     const referencePdf =
@@ -1094,24 +1387,84 @@ const downloadPDF = async () => {
         data?.design?.template,
       );
 
+    const exportWidth = 794;
+    const exportHeight = Math.max(
+      1123,
+      previewElement.scrollHeight,
+      previewElement.getBoundingClientRect()
+        .height,
+    );
+
+    /*
+     * Mobile memakai scale 2 agar stabil dan tidak
+     * melewati batas memori browser. Desktop template
+     * referensi dapat memakai 2.5 untuk ketajaman ekstra.
+     */
+    const captureScale = isMobile
+      ? 2
+      : referencePdf
+        ? 2.5
+        : 2;
+
     const canvas =
       await html2canvas(
         previewElement,
         {
-      scale: referencePdf ? 3 : 2,
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-      backgroundColor:
-        data.design.pageBackground || "#ffffff",
-      scrollX: 0,
-      scrollY: -window.scrollY,
+          scale: captureScale,
+          width: exportWidth,
+          height: exportHeight,
+          windowWidth: 1280,
+          windowHeight: Math.max(
+            1600,
+            exportHeight + 100,
+          ),
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          backgroundColor:
+            data.design.pageBackground ||
+            "#ffffff",
+          scrollX: 0,
+          scrollY: 0,
 
-      // Pengamanan tambahan: html2canvas tidak memproses watermark.
-      ignoreElements: (element) =>
-        element?.hasAttribute?.("data-cv-watermark") ||
-        element?.hasAttribute?.("data-html2canvas-ignore"),
-    });
+          ignoreElements: (element) =>
+            element?.hasAttribute?.(
+              "data-cv-watermark",
+            ) ||
+            element?.hasAttribute?.(
+              "data-html2canvas-ignore",
+            ),
+
+          onclone: (clonedDocument) => {
+            const clonedRoot =
+              clonedDocument.querySelector(
+                '[data-cv-export-root="true"]',
+              );
+
+            if (clonedRoot) {
+              Object.assign(
+                clonedRoot.style,
+                {
+                  width: "794px",
+                  minWidth: "794px",
+                  maxWidth: "794px",
+                  transform: "none",
+                  zoom: "1",
+                },
+              );
+            }
+
+            clonedDocument
+              .querySelectorAll("*")
+              .forEach((element) => {
+                element.style.animation =
+                  "none";
+                element.style.transition =
+                  "none";
+              });
+          },
+        },
+      );
 
     if (!canvas.width || !canvas.height) {
       throw new Error(
@@ -1496,10 +1849,14 @@ const downloadPDF = async () => {
         );
 
         const pageImageData =
-          pageCanvas.toDataURL(
-            "image/jpeg",
-            0.96
-          );
+          imageFormat === "PNG"
+            ? pageCanvas.toDataURL(
+                "image/png"
+              )
+            : pageCanvas.toDataURL(
+                "image/jpeg",
+                0.96
+              );
 
         const pageImageHeight =
           (sliceHeight * pageWidth) /
@@ -1545,14 +1902,690 @@ const downloadPDF = async () => {
       }`
     );
   } finally {
-    watermarkElements.forEach((element, index) => {
-      element.style.visibility =
-        previousVisibility[index] || "";
-    });
-
+    releaseExport();
     setExporting(false);
   }
 };
+
+
+const downloadDOCX = async () => {
+  if (!user) {
+    onRequireAuth();
+    return;
+  }
+
+  setExporting(true);
+
+  try {
+    await saveToCloud({
+      silent: true,
+    });
+
+    const {
+      AlignmentType,
+      BorderStyle,
+      Document,
+      ImageRun,
+      Packer,
+      Paragraph,
+      TextRun,
+    } = await import("docx");
+
+    const language =
+      data.design.language;
+
+    const labels =
+      language === "EN"
+        ? {
+            summary: "PROFESSIONAL SUMMARY",
+            experience: "WORK EXPERIENCE",
+            education: "EDUCATION",
+            skills: "SKILLS",
+            languages: "LANGUAGES",
+            certifications: "CERTIFICATIONS",
+            hobbies: "INTERESTS",
+            present: "Present",
+          }
+        : {
+            summary: "RINGKASAN PROFESIONAL",
+            experience: "PENGALAMAN KERJA",
+            education: "PENDIDIKAN",
+            skills: "KEAHLIAN",
+            languages: "BAHASA",
+            certifications: "SERTIFIKASI",
+            hobbies: "HOBI & MINAT",
+            present: "Sekarang",
+          };
+
+    const fullName = [
+      data.contact.firstName,
+      data.contact.lastName,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Nama Anda";
+
+    const accent = String(
+      data.design.primaryColor ||
+        "#0ea5e9",
+    )
+      .replace("#", "")
+      .toUpperCase();
+
+    const allowedFonts = new Set([
+      "Arial",
+      "Calibri",
+      "Georgia",
+      "Times New Roman",
+      "Verdana",
+    ]);
+
+    const fontFamily =
+      allowedFonts.has(
+        data.design.fontFamily,
+      )
+        ? data.design.fontFamily
+        : "Arial";
+
+    const bodyRun = (
+      text,
+      options = {},
+    ) =>
+      new TextRun({
+        text: String(text || ""),
+        font: fontFamily,
+        size: 21,
+        color: "334155",
+        ...options,
+      });
+
+    const children = [];
+
+    const photoSource =
+      data.photo.editedUrl ||
+      data.photo.originalUrl ||
+      "";
+
+    if (photoSource) {
+      try {
+        const photo =
+          await resolveDocxImage(
+            photoSource,
+          );
+
+        if (photo) {
+          children.push(
+            new Paragraph({
+              alignment:
+                AlignmentType.CENTER,
+              spacing: {
+                after: 160,
+              },
+              children: [
+                new ImageRun({
+                  data: photo.data,
+                  type: photo.type,
+                  transformation: {
+                    width: 82,
+                    height: 82,
+                    rotation: Number(
+                      data.photo.rotation ||
+                        0,
+                    ),
+                  },
+                }),
+              ],
+            }),
+          );
+        }
+      } catch (photoError) {
+        console.warn(
+          "Foto dilewati pada DOCX:",
+          photoError,
+        );
+      }
+    }
+
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: {
+          after: 80,
+        },
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            font: fontFamily,
+            size: 38,
+            color: "0F172A",
+          }),
+        ],
+      }),
+    );
+
+    if (data.contact.desiredJob) {
+      children.push(
+        new Paragraph({
+          alignment:
+            AlignmentType.CENTER,
+          spacing: {
+            after: 90,
+          },
+          children: [
+            new TextRun({
+              text:
+                data.contact.desiredJob,
+              bold: true,
+              font: fontFamily,
+              size: 23,
+              color: accent,
+            }),
+          ],
+        }),
+      );
+    }
+
+    const contactLine = [
+      data.contact.email,
+      data.contact.phone,
+      data.contact.city,
+      data.contact.country,
+    ]
+      .filter(Boolean)
+      .join("  •  ");
+
+    if (contactLine) {
+      children.push(
+        new Paragraph({
+          alignment:
+            AlignmentType.CENTER,
+          spacing: {
+            after: 240,
+          },
+          children: [
+            bodyRun(contactLine, {
+              size: 18,
+              color: "64748B",
+            }),
+          ],
+        }),
+      );
+    }
+
+    const addSectionTitle = (title) => {
+      children.push(
+        new Paragraph({
+          spacing: {
+            before: 220,
+            after: 120,
+          },
+          border: {
+            bottom: {
+              color: accent,
+              style:
+                BorderStyle.SINGLE,
+              size: 8,
+              space: 4,
+            },
+          },
+          children: [
+            new TextRun({
+              text: title,
+              bold: true,
+              font: fontFamily,
+              size: 23,
+              color: accent,
+            }),
+          ],
+        }),
+      );
+    };
+
+    const addTextBlock = (
+      value,
+      {
+        after = 100,
+      } = {},
+    ) => {
+      const lines = String(value || "")
+        .replace(/\r/g, "")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      for (const line of lines) {
+        const bullet = line.match(
+          /^(?:[•*-]|\d+[.)])\s*(.*)$/,
+        );
+
+        const content = stripFormatting(
+          bullet ? bullet[1] : line,
+        );
+
+        children.push(
+          new Paragraph({
+            bullet: bullet
+              ? { level: 0 }
+              : undefined,
+            spacing: {
+              after,
+              line: 276,
+            },
+            children: [
+              bodyRun(content),
+            ],
+          }),
+        );
+      }
+    };
+
+    const sectionOrder =
+      Array.isArray(
+        data.design.sectionOrder,
+      )
+        ? data.design.sectionOrder
+        : SECTION_KEYS;
+
+    const hidden = new Set(
+      data.design.hiddenSections ||
+        [],
+    );
+
+    for (
+      const sectionKey of sectionOrder
+    ) {
+      if (hidden.has(sectionKey)) {
+        continue;
+      }
+
+      if (
+        sectionKey === "summary" &&
+        stripFormatting(data.summary)
+          .trim()
+      ) {
+        addSectionTitle(
+          labels.summary,
+        );
+
+        addTextBlock(data.summary);
+      }
+
+      if (
+        sectionKey ===
+        "experience"
+      ) {
+        const experiences =
+          data.experiences.filter(
+            (item) =>
+              item.jobTitle ||
+              item.employer ||
+              item.description,
+          );
+
+        if (experiences.length) {
+          addSectionTitle(
+            labels.experience,
+          );
+
+          for (
+            const item of experiences
+          ) {
+            const roleLine = [
+              item.jobTitle,
+              item.employer,
+            ]
+              .filter(Boolean)
+              .join(" — ");
+
+            children.push(
+              new Paragraph({
+                spacing: {
+                  before: 100,
+                  after: 40,
+                },
+                children: [
+                  bodyRun(roleLine, {
+                    bold: true,
+                    size: 22,
+                    color: "0F172A",
+                  }),
+                ],
+              }),
+            );
+
+            const period = [
+              formatMonth(
+                item.startDate,
+                language,
+              ),
+              item.current
+                ? labels.present
+                : formatMonth(
+                    item.endDate,
+                    language,
+                  ),
+            ]
+              .filter(Boolean)
+              .join(" – ");
+
+            const meta = [
+              item.location,
+              period,
+            ]
+              .filter(Boolean)
+              .join("  •  ");
+
+            if (meta) {
+              children.push(
+                new Paragraph({
+                  spacing: {
+                    after: 70,
+                  },
+                  children: [
+                    bodyRun(meta, {
+                      size: 18,
+                      color: "64748B",
+                    }),
+                  ],
+                }),
+              );
+            }
+
+            addTextBlock(
+              item.description,
+              { after: 70 },
+            );
+          }
+        }
+      }
+
+      if (
+        sectionKey === "education"
+      ) {
+        const education =
+          data.education.filter(
+            (item) =>
+              item.school ||
+              item.degree ||
+              item.description,
+          );
+
+        if (education.length) {
+          addSectionTitle(
+            labels.education,
+          );
+
+          for (
+            const item of education
+          ) {
+            const educationLine = [
+              item.degree,
+              item.school,
+            ]
+              .filter(Boolean)
+              .join(" — ");
+
+            children.push(
+              new Paragraph({
+                spacing: {
+                  before: 80,
+                  after: 40,
+                },
+                children: [
+                  bodyRun(
+                    educationLine,
+                    {
+                      bold: true,
+                      size: 22,
+                      color: "0F172A",
+                    },
+                  ),
+                ],
+              }),
+            );
+
+            const period = [
+              formatMonth(
+                item.startDate,
+                language,
+              ),
+              item.current
+                ? labels.present
+                : formatMonth(
+                    item.endDate,
+                    language,
+                  ),
+            ]
+              .filter(Boolean)
+              .join(" – ");
+
+            const meta = [
+              item.location,
+              period,
+            ]
+              .filter(Boolean)
+              .join("  •  ");
+
+            if (meta) {
+              children.push(
+                new Paragraph({
+                  spacing: {
+                    after: 70,
+                  },
+                  children: [
+                    bodyRun(meta, {
+                      size: 18,
+                      color: "64748B",
+                    }),
+                  ],
+                }),
+              );
+            }
+
+            addTextBlock(
+              item.description,
+              { after: 70 },
+            );
+          }
+        }
+      }
+
+      if (sectionKey === "skills") {
+        const skills =
+          data.skills.filter(
+            (item) => item.name,
+          );
+
+        if (skills.length) {
+          addSectionTitle(
+            labels.skills,
+          );
+
+          for (const skill of skills) {
+            const level =
+              data.showSkillLevel &&
+              skill.level
+                ? ` (${skill.level}/5)`
+                : "";
+
+            children.push(
+              new Paragraph({
+                bullet: { level: 0 },
+                spacing: {
+                  after: 60,
+                },
+                children: [
+                  bodyRun(
+                    `${skill.name}${level}`,
+                  ),
+                ],
+              }),
+            );
+          }
+        }
+      }
+
+      if (
+        sectionKey === "languages"
+      ) {
+        const languages =
+          data.languages.filter(
+            (item) => item.language,
+          );
+
+        if (languages.length) {
+          addSectionTitle(
+            labels.languages,
+          );
+
+          for (
+            const item of languages
+          ) {
+            children.push(
+              new Paragraph({
+                bullet: { level: 0 },
+                spacing: {
+                  after: 60,
+                },
+                children: [
+                  bodyRun(
+                    [
+                      item.language,
+                      item.level,
+                    ]
+                      .filter(Boolean)
+                      .join(" — "),
+                  ),
+                ],
+              }),
+            );
+          }
+        }
+      }
+
+      if (
+        sectionKey ===
+        "certifications"
+      ) {
+        const certifications =
+          data.certifications.filter(
+            (item) => item.name,
+          );
+
+        if (
+          certifications.length
+        ) {
+          addSectionTitle(
+            labels.certifications,
+          );
+
+          for (
+            const item of certifications
+          ) {
+            children.push(
+              new Paragraph({
+                bullet: { level: 0 },
+                spacing: {
+                  after: 60,
+                },
+                children: [
+                  bodyRun(
+                    [
+                      item.name,
+                      item.issuer,
+                      item.year,
+                    ]
+                      .filter(Boolean)
+                      .join(" — "),
+                  ),
+                ],
+              }),
+            );
+          }
+        }
+      }
+
+      if (sectionKey === "hobbies") {
+        const hobbies =
+          data.hobbies
+            .map((item) => item.name)
+            .filter(Boolean);
+
+        if (hobbies.length) {
+          addSectionTitle(
+            labels.hobbies,
+          );
+
+          children.push(
+            new Paragraph({
+              spacing: {
+                after: 80,
+              },
+              children: [
+                bodyRun(
+                  hobbies.join(" • "),
+                ),
+              ],
+            }),
+          );
+        }
+      }
+    }
+
+    const doc = new Document({
+      creator: "CV Kilat",
+      title: documentName ||
+        `${fullName} CV`,
+      description:
+        "CV editable yang dibuat melalui CV Kilat.",
+      sections: [
+        {
+          properties: {
+            page: {
+              size: {
+                width: 11906,
+                height: 16838,
+              },
+              margin: {
+                top: 850,
+                right: 900,
+                bottom: 850,
+                left: 900,
+              },
+            },
+          },
+          children,
+        },
+      ],
+    });
+
+    const blob =
+      await Packer.toBlob(doc);
+
+    triggerBlobDownload(
+      blob,
+      `${safeDocumentFilename(
+        documentName,
+      )}.docx`,
+    );
+  } catch (error) {
+    console.error(
+      "Gagal membuat DOCX:",
+      error,
+    );
+
+    alert(
+      `❌ DOCX gagal dibuat.\n\n${
+        error?.message ||
+        "Terjadi kesalahan saat membuat dokumen Word."
+      }`,
+    );
+  } finally {
+    setExporting(false);
+  }
+};
+
 
 const moveSection = (sectionKey, direction) => {
     setData((current) => {
@@ -2044,11 +3077,20 @@ const getFunctionErrorMessage = async (error) => {
       );
     }
 
+    const format =
+      downloadFormatRef.current;
+
     setPaymentMessage(
-      "Akses terverifikasi. PDF sedang dibuat tanpa watermark...",
+      format === "docx"
+        ? "Akses terverifikasi. Word DOCX sedang dibuat..."
+        : "Akses terverifikasi. PDF sedang dibuat tanpa watermark...",
     );
 
-    await downloadPDF();
+    if (format === "docx") {
+      await downloadDOCX();
+    } else {
+      await downloadPDF();
+    }
 
     setPaymentOpen(false);
     setPaymentMessage("");
@@ -2220,12 +3262,14 @@ const getFunctionErrorMessage = async (error) => {
     }
   };
 
-  const requestDownload = async () => {
-    if (!user) {
-      onRequireAuth();
-      return;
-    }
+  const requestDownloadForFormat = async (
+    format,
+  ) => {
+    downloadFormatRef.current =
+      format;
 
+    setDownloadFormat(format);
+    setFormatOpen(false);
     setPaymentBusy(true);
     setPaymentMessage(
       "Memeriksa akses unduh...",
@@ -2243,7 +3287,9 @@ const getFunctionErrorMessage = async (error) => {
       setPaymentCvId(targetCvId);
 
       const access =
-        await checkPaymentAccess(targetCvId);
+        await checkPaymentAccess(
+          targetCvId,
+        );
 
       if (access?.can_download) {
         await consumeAccessAndDownload(
@@ -2254,7 +3300,9 @@ const getFunctionErrorMessage = async (error) => {
 
       setPaymentOpen(true);
       setPaymentMessage(
-        "Pilih paket untuk mengunduh CV tanpa watermark.",
+        format === "docx"
+          ? "Pilih paket untuk mengunduh CV dalam format Word DOCX."
+          : "Pilih paket untuk mengunduh CV PDF tanpa watermark.",
       );
     } catch (error) {
       console.error(
@@ -2270,6 +3318,15 @@ const getFunctionErrorMessage = async (error) => {
     } finally {
       setPaymentBusy(false);
     }
+  };
+
+  const requestDownload = () => {
+    if (!user) {
+      onRequireAuth();
+      return;
+    }
+
+    setFormatOpen(true);
   };
 
 
@@ -2586,7 +3643,7 @@ const getFunctionErrorMessage = async (error) => {
             onClick={requestDownload}
             className="rounded-xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-100 hover:bg-sky-600 disabled:opacity-60"
           >
-            {exporting ? "Membuat PDF..." : "Unduh PDF"}
+            {exporting ? "Menyiapkan..." : "Unduh CV"}
           </button>
         </div>
 
@@ -2735,7 +3792,7 @@ const getFunctionErrorMessage = async (error) => {
             onClick={requestDownload}
             className="rounded-2xl bg-sky-500 px-3 py-3 text-xs font-extrabold text-white shadow-lg shadow-sky-500/20 transition active:scale-[0.98] disabled:opacity-60"
           >
-            {exporting ? "Membuat PDF..." : "Unduh CV"}
+            {exporting ? "Menyiapkan..." : "Unduh CV"}
           </button>
         </div>
       </div>
@@ -2807,6 +3864,21 @@ const getFunctionErrorMessage = async (error) => {
           </section>
         </div>
       ) : null}
+
+
+      <DownloadFormatModal
+        open={formatOpen}
+        busy={exporting || paymentBusy}
+        selected={downloadFormat}
+        onClose={() => {
+          if (!exporting && !paymentBusy) {
+            setFormatOpen(false);
+          }
+        }}
+        onChoose={
+          requestDownloadForFormat
+        }
+      />
 
 <PaymentPackageModal
         open={paymentOpen}
