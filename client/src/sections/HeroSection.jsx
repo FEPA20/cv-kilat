@@ -97,7 +97,7 @@ export default function HeroSection({
 
                 <div className="relative">
                   <div className="flex h-24 w-24 items-center justify-center rounded-[26px] border-4 border-white/20 bg-gradient-to-br from-amber-300 to-amber-500 text-3xl font-black text-slate-950 shadow-xl shadow-black/20">
-                    FP
+                    RS
                   </div>
 
                   <div className="mt-7">
