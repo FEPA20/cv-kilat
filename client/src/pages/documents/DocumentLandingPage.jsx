@@ -46,7 +46,7 @@ function WorkflowCard({ item }) {
   );
 }
 
-function DocumentCard({ document }) {
+function DocumentCard({ document, onOpen }) {
   const category = getKilatDocsCategory(document.categoryId);
 
   return (
@@ -96,16 +96,204 @@ function DocumentCard({ document }) {
         </p>
       ) : null}
 
+      <div className="mt-auto grid gap-2">
+
+
+        <button
+
+
+          type="button"
+
+
+          onClick={() => onOpen?.(document)}
+
+
+          className="inline-flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-black text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
+
+
+        >
+
+
+          Lihat Detail
+
+
+          <span>→</span>
+
+
+        </button>
+
+
+
+        <button
+
+
+          type="button"
+
+
+          disabled
+
+
+          className="inline-flex cursor-not-allowed items-center justify-between rounded-xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-400"
+
+
+          title="Generator dokumen masuk tahap CK-DOC-01/CK-DOC-02"
+
+
+        >
+
+
+          Buat Dokumen
+
+
+          <span>→</span>
+
+
+        </button>
+
+
+      </div>
+    </article>
+  );
+}
+
+
+function DocumentDetailModal({ document, onClose }) {
+  if (!document) return null;
+
+  return (
+    <div className="fixed inset-0 z-[160] flex items-end justify-center bg-slate-950/60 px-4 py-4 backdrop-blur-sm sm:items-center">
       <button
         type="button"
-        disabled
-        className="mt-auto inline-flex cursor-not-allowed items-center justify-between rounded-xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-400"
-        title="Generator dokumen masuk tahap CK-DOC-01/CK-DOC-02"
-      >
-        Buat Dokumen
-        <span>→</span>
-      </button>
-    </article>
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        aria-label="Tutup detail dokumen"
+      />
+
+      <article className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[30px] bg-white p-5 shadow-2xl sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">
+              Detail Dokumen
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
+              {document.title}
+            </h2>
+
+            <p className="mt-3 text-sm leading-7 text-slate-500">
+              {document.description}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl font-black text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+              Use case
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              {document.useCase}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+              Target output
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(document.outputFormat || []).map((format) => (
+                <span
+                  key={format}
+                  className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-700"
+                >
+                  {format}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+            Data yang akan ditanyakan
+          </p>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {(document.fields || []).map((field) => (
+              <div
+                key={field}
+                className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700"
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-black text-emerald-700">
+                  ✓
+                </span>
+
+                {field}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+            Keyword
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(document.tags || []).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {document.risk ? (
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">
+              Catatan risiko
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-amber-900">
+              {document.risk}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <button
+            type="button"
+            disabled
+            className="inline-flex cursor-not-allowed items-center justify-center rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-400"
+            title="Generator dokumen akan diaktifkan pada CK-DOC-01/CK-DOC-02"
+          >
+            Mulai Buat Dokumen · Coming Soon
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+          >
+            Tutup
+          </button>
+        </div>
+      </article>
+    </div>
   );
 }
 
@@ -115,8 +303,10 @@ export default function DocumentLandingPage({
   onStartCv = () => {},
   onLogin = () => {},
 }) {
+  // CK-DOC-00C-SAFE-V2
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY_ID);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDocument, setSelectedDocument] = useState(null);
 
   const featuredDocuments = useMemo(
     () => KILAT_DOCS_CATALOG.filter((document) => document.featured).slice(0, 6),
@@ -340,7 +530,11 @@ export default function DocumentLandingPage({
 
           {filteredDocuments.length ? (
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredDocuments.map((document) => <DocumentCard key={document.id} document={document} />)}
+              {filteredDocuments.map((document) => <DocumentCard
+                  key={document.id}
+                  document={document}
+                  onOpen={setSelectedDocument}
+                />)}
             </div>
           ) : (
             <div className="mt-6 rounded-[26px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
@@ -362,7 +556,12 @@ export default function DocumentLandingPage({
             atau dokumen yang memerlukan pejabat berwenang tetap membutuhkan review profesional.
           </p>
         </div>
-      </section>
+      </section>      {selectedDocument ? (
+        <DocumentDetailModal
+          document={selectedDocument}
+          onClose={() => setSelectedDocument(null)}
+        />
+      ) : null}
     </main>
   );
 }
