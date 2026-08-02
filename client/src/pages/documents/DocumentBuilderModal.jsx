@@ -10,40 +10,282 @@ function buildInitialForm(document) {
   }, {});
 }
 
-function createDraftText(document, formData) {
-  const entries = Object.entries(formData || {}).filter(([, value]) =>
-    String(value || "").trim(),
+// CK-DOC-02-SAFE
+function cleanText(value) {
+  return String(value || "").trim();
+}
+
+function normalizeText(value) {
+  return cleanText(value).toLowerCase();
+}
+
+function findValue(formData, keywords) {
+  const entries = Object.entries(formData || {});
+  const found = entries.find(([field]) => {
+    const normalizedField = normalizeText(field);
+    return keywords.some((keyword) => normalizedField.includes(keyword));
+  });
+
+  return cleanText(found?.[1]);
+}
+
+function pickFilledEntries(formData) {
+  return Object.entries(formData || [])
+    .map(([field, value]) => [field, cleanText(value)])
+    .filter(([, value]) => value);
+}
+
+function detectDraftType(document) {
+  const text = normalizeText(
+    [
+      document?.title,
+      document?.categoryLabel,
+      document?.useCase,
+      ...(document?.tags || []),
+    ].join(" "),
   );
 
+  if (
+    text.includes("somasi") ||
+    text.includes("penagihan") ||
+    text.includes("tagihan") ||
+    text.includes("utang") ||
+    text.includes("pembayaran")
+  ) {
+    return "somasi";
+  }
+
+  if (
+    text.includes("bast") ||
+    text.includes("serah terima") ||
+    text.includes("handover")
+  ) {
+    return "bast";
+  }
+
+  if (
+    text.includes("klaim") ||
+    text.includes("asuransi") ||
+    text.includes("jaminan")
+  ) {
+    return "klaim";
+  }
+
+  if (
+    text.includes("sop") ||
+    text.includes("prosedur") ||
+    text.includes("instruksi kerja")
+  ) {
+    return "sop";
+  }
+
+  if (
+    text.includes("kuasa") ||
+    text.includes("pernyataan") ||
+    text.includes("permohonan")
+  ) {
+    return "surat";
+  }
+
+  return "umum";
+}
+
+function createMetaBlock(document, formData) {
+  const nomor = findValue(formData, ["nomor surat", "nomor dokumen", "nomor"]);
+  const tanggal = findValue(formData, ["tanggal"]);
+  const pihakPertama = findValue(formData, ["pihak pertama", "pengirim", "pemohon", "nama pemberi"]);
+  const pihakKedua = findValue(formData, ["pihak kedua", "penerima", "termohon", "nama penerima"]);
+  const perihal = document?.title || "Dokumen";
+
+  return [
+    `Nomor   : ${nomor || "[isi nomor dokumen jika ada]"}`,
+    `Tanggal : ${tanggal || "[isi tanggal dokumen]"}`,
+    `Perihal : ${perihal}`,
+    "",
+    `Pihak pembuat / pemohon : ${pihakPertama || "[isi pihak pembuat/pemohon]"}`,
+    `Pihak tujuan / penerima : ${pihakKedua || "[isi pihak tujuan/penerima]"}`,
+  ];
+}
+
+function createDataSummary(formData) {
+  const entries = pickFilledEntries(formData);
+
+  if (!entries.length) {
+    return [
+      "DATA YANG SUDAH DIISI",
+      "- Belum ada data yang diisi.",
+    ];
+  }
+
+  return [
+    "DATA YANG SUDAH DIISI",
+    ...entries.map(([field, value]) => `- ${field}: ${value}`),
+  ];
+}
+
+function createFormalNarrative(document, formData) {
+  const draftType = detectDraftType(document);
+  const tujuan = document?.useCase || "kebutuhan administrasi pengguna";
+  const pihakPertama = findValue(formData, ["pihak pertama", "pengirim", "pemohon", "nama pemberi"]);
+  const pihakKedua = findValue(formData, ["pihak kedua", "penerima", "termohon", "nama penerima"]);
+  const kronologi = findValue(formData, ["kronologi", "latar belakang", "deskripsi", "uraian"]);
+  const nominal = findValue(formData, ["nominal", "jumlah", "tagihan", "biaya", "nilai"]);
+  const batasWaktu = findValue(formData, ["batas waktu", "deadline", "tenggat", "tanggal jatuh tempo"]);
+  const barang = findValue(formData, ["barang", "produk", "unit", "aset", "imei", "sku"]);
+  const lokasi = findValue(formData, ["lokasi", "alamat", "tempat"]);
+  const bukti = findValue(formData, ["bukti", "lampiran", "dokumen pendukung"]);
+
+  if (draftType === "somasi") {
+    return [
+      "ISI DRAFT",
+      `Dengan hormat,`,
+      "",
+      `Melalui surat ini, ${pihakPertama || "[pihak pengirim]"} menyampaikan pemberitahuan dan/atau teguran kepada ${pihakKedua || "[pihak tujuan]"} terkait kewajiban yang belum diselesaikan.`,
+      "",
+      kronologi
+        ? `Adapun kronologi singkatnya adalah sebagai berikut: ${kronologi}`
+        : "Adapun kronologi singkat kejadian perlu dilengkapi agar surat ini memiliki dasar yang jelas.",
+      nominal
+        ? `Kewajiban/nilai yang menjadi pokok permasalahan adalah sebesar ${nominal}.`
+        : "Nominal atau kewajiban yang menjadi pokok permasalahan perlu dilengkapi apabila relevan.",
+      bukti
+        ? `Sebagai pendukung, terdapat bukti/lampiran berupa: ${bukti}.`
+        : "Bukti pendukung perlu dilampirkan apabila tersedia.",
+      "",
+      `Sehubungan dengan hal tersebut, ${pihakKedua || "[pihak tujuan]"} diminta untuk menyelesaikan kewajiban tersebut ${batasWaktu ? `paling lambat pada ${batasWaktu}` : "dalam batas waktu yang akan ditentukan"}.`,
+      "",
+      "Apabila sampai batas waktu tersebut belum terdapat penyelesaian, pihak pengirim dapat mempertimbangkan langkah lanjutan sesuai ketentuan yang berlaku.",
+    ];
+  }
+
+  if (draftType === "bast") {
+    return [
+      "ISI DRAFT",
+      `Pada hari/tanggal sebagaimana tercantum dalam dokumen ini, ${pihakPertama || "[pihak pertama]"} telah menyerahkan kepada ${pihakKedua || "[pihak kedua]"} objek/barang/dokumen yang dijelaskan di bawah ini.`,
+      "",
+      barang
+        ? `Objek yang diserahterimakan: ${barang}.`
+        : "Objek yang diserahterimakan perlu dilengkapi secara jelas.",
+      lokasi
+        ? `Lokasi serah terima: ${lokasi}.`
+        : "Lokasi serah terima perlu dilengkapi apabila relevan.",
+      kronologi
+        ? `Keterangan tambahan: ${kronologi}`
+        : "Keterangan tambahan dapat dilengkapi sesuai kondisi serah terima.",
+      "",
+      "Dengan ditandatanganinya dokumen ini, para pihak menyatakan bahwa proses serah terima telah dilakukan sesuai kondisi yang disepakati.",
+    ];
+  }
+
+  if (draftType === "klaim") {
+    return [
+      "ISI DRAFT",
+      `Dengan hormat,`,
+      "",
+      `Melalui dokumen ini, ${pihakPertama || "[pemohon]"} mengajukan klaim/permohonan kepada ${pihakKedua || "[pihak tujuan]"} untuk kebutuhan: ${tujuan}.`,
+      "",
+      kronologi
+        ? `Kronologi kejadian: ${kronologi}`
+        : "Kronologi kejadian perlu dilengkapi secara jelas dan berurutan.",
+      barang
+        ? `Objek klaim: ${barang}.`
+        : "Objek klaim perlu dilengkapi apabila relevan.",
+      nominal
+        ? `Estimasi nilai klaim/kerugian: ${nominal}.`
+        : "Nilai klaim/kerugian perlu dilengkapi apabila tersedia.",
+      bukti
+        ? `Dokumen pendukung: ${bukti}.`
+        : "Dokumen pendukung perlu dilampirkan untuk memperkuat pengajuan.",
+      "",
+      "Demikian pengajuan ini disampaikan agar dapat diproses sesuai ketentuan yang berlaku.",
+    ];
+  }
+
+  if (draftType === "sop") {
+    return [
+      "ISI DRAFT",
+      `Dokumen ini disusun sebagai panduan pelaksanaan untuk kebutuhan: ${tujuan}.`,
+      "",
+      "TUJUAN",
+      kronologi || "Menjelaskan standar langkah kerja agar proses berjalan konsisten, tertib, dan terdokumentasi.",
+      "",
+      "RUANG LINGKUP",
+      lokasi
+        ? `Prosedur ini berlaku pada area/lokasi: ${lokasi}.`
+        : "Ruang lingkup prosedur perlu dilengkapi sesuai proses yang akan diatur.",
+      "",
+      "KETENTUAN UMUM",
+      "- Setiap pihak yang terlibat wajib mengikuti tahapan yang ditetapkan.",
+      "- Setiap aktivitas penting perlu dicatat dan dapat ditelusuri kembali.",
+      "- Penyimpangan proses harus dilaporkan kepada pihak penanggung jawab.",
+    ];
+  }
+
+  return [
+    "ISI DRAFT",
+    `Dokumen “${document?.title || "Dokumen"}” ini disusun untuk kebutuhan: ${tujuan}.`,
+    "",
+    pihakPertama || pihakKedua
+      ? `Dokumen ini melibatkan ${pihakPertama || "[pihak pertama]"} dan ${pihakKedua || "[pihak kedua]"}.`
+      : "Pihak-pihak terkait perlu dilengkapi agar dokumen dapat digunakan dengan jelas.",
+    kronologi
+      ? `Uraian/kronologi: ${kronologi}`
+      : "Uraian atau kronologi perlu dilengkapi sesuai kebutuhan dokumen.",
+    bukti
+      ? `Bukti atau lampiran pendukung: ${bukti}.`
+      : "Bukti atau lampiran pendukung dapat ditambahkan apabila tersedia.",
+    "",
+    "Dokumen ini perlu diperiksa kembali sebelum digunakan sebagai dokumen final.",
+  ];
+}
+
+function createClosingBlock() {
+  return [
+    "PENUTUP",
+    "Demikian draft awal ini dibuat untuk diperiksa dan disesuaikan kembali sebelum digunakan.",
+    "",
+    "Hormat kami,",
+    "",
+    "",
+    "[Nama dan Tanda Tangan]",
+  ];
+}
+
+function createDraftText(document, formData) {
   const title = document?.title || "Dokumen";
-  const opening =
-    "Draft awal ini dibuat dari data yang Anda isi. Silakan periksa kembali nama pihak, tanggal, nominal, kronologi, dan bukti sebelum digunakan.";
+  const entries = pickFilledEntries(formData);
 
   if (!entries.length) {
     return [
       title.toUpperCase(),
       "",
-      opening,
+      "Draft resmi akan muncul setelah Anda mengisi form di sebelah kiri.",
       "",
-      "Data belum diisi. Lengkapi form di sebelah kiri untuk melihat preview draft.",
+      "Petunjuk:",
+      "- Isi pihak terkait dengan lengkap.",
+      "- Isi tanggal, kronologi, nominal, barang, atau bukti jika relevan.",
+      "- Preview akan berubah otomatis setelah data diisi.",
+      "",
+      "Catatan: tahap CK-DOC-02 masih preview lokal. Export, penyimpanan, AI interview, dan payment dokumen belum aktif.",
     ].join("\n");
   }
 
   return [
     title.toUpperCase(),
+    "=".repeat(Math.min(title.length, 60)),
     "",
-    opening,
+    ...createMetaBlock(document, formData),
     "",
-    "RINGKASAN DATA",
-    ...entries.map(([field, value]) => `- ${field}: ${value}`),
+    ...createDataSummary(formData),
     "",
-    "DRAFT NARASI",
-    `Berdasarkan informasi yang telah diberikan, dokumen “${title}” ini disusun untuk kebutuhan: ${document?.useCase || "administrasi pengguna"}.`,
+    ...createFormalNarrative(document, formData),
     "",
-    "Pihak terkait, tanggal, kronologi, dan informasi pendukung perlu disesuaikan kembali sebelum dokumen digunakan sebagai dokumen resmi.",
+    ...createClosingBlock(),
     "",
-    "CATATAN",
-    "Ini masih preview draft CK-DOC-01. Export DOCX/PDF, penyimpanan, AI interview, dan payment dokumen belum aktif.",
+    "CATATAN SISTEM",
+    "- Draft ini masih perlu diperiksa ulang oleh pengguna.",
+    "- Pastikan nama pihak, tanggal, nominal, kronologi, dan bukti sudah benar.",
+    "- Export DOCX/PDF, penyimpanan, AI interview, dan payment dokumen belum aktif pada CK-DOC-02.",
   ].join("\n");
 }
 
@@ -117,7 +359,7 @@ export default function DocumentBuilderModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">
-                CK-DOC-01 · Form Dokumen
+                CK-DOC-02 · Draft Dokumen Resmi
               </p>
 
               <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
@@ -125,7 +367,7 @@ export default function DocumentBuilderModal({
               </h2>
 
               <p className="mt-3 text-sm leading-7 text-slate-500">
-                Lengkapi field awal untuk melihat preview draft. Tahap ini belum menyimpan data dan belum export DOCX/PDF.
+                Lengkapi field awal untuk membuat preview draft yang lebih rapi dan mendekati format dokumen resmi. Tahap ini belum menyimpan data dan belum export DOCX/PDF.
               </p>
             </div>
 
@@ -187,11 +429,11 @@ export default function DocumentBuilderModal({
 
           <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">
-              Batasan CK-DOC-01
+              Batasan CK-DOC-02
             </p>
 
             <p className="mt-2 text-sm leading-6 text-amber-900">
-              Data belum disimpan ke database. Export DOCX/PDF, payment dokumen, dan AI interview akan dibuat pada tahap berikutnya.
+              Draft masih berupa preview lokal. Data belum disimpan ke database. Export DOCX/PDF, payment dokumen, dan AI interview akan dibuat pada tahap berikutnya.
             </p>
           </div>
         </section>
