@@ -217,6 +217,7 @@ export default function DashboardPage({
   onCreate,
   onEdit,
   onUploadDocument,
+  onOpenDocuments = () => {},
   onCreateCoverLetter,
   onLogout,
   onBack,
@@ -373,6 +374,7 @@ export default function DashboardPage({
             onCreate={onCreate}
             onEdit={onEdit}
             onUploadDocument={onUploadDocument}
+            onOpenDocuments={onOpenDocuments}
             onDelete={handleDelete}
             deletingId={deletingId}
             onCreateCoverLetter={onCreateCoverLetter}
@@ -543,6 +545,7 @@ function DashboardOverview({
   onCreate,
   onEdit,
   onUploadDocument,
+  onOpenDocuments = () => {},
   onDelete,
   deletingId,
   onCreateCoverLetter,
@@ -576,6 +579,7 @@ function DashboardOverview({
         selectedCv={selectedCv}
         onCreate={onCreate}
         onUploadDocument={onUploadDocument}
+        onOpenDocuments={onOpenDocuments}
         onCreateCoverLetter={onCreateCoverLetter}
       />
 
@@ -659,6 +663,7 @@ function QuickActionCards({
   selectedCv,
   onCreate,
   onUploadDocument,
+  onOpenDocuments = () => {},
   onCreateCoverLetter,
 }) {
   const actions = [
@@ -704,6 +709,21 @@ function QuickActionCards({
       actionLabel: "Buat Surat Lamaran",
       onClick: () => onCreateCoverLetter?.(selectedCv || null),
     },
+    {
+      // CK-DOC-00A-SAFE-V2
+      id: "kilatdocs",
+      eyebrow: "Modul baru KilatTools",
+      title: "KilatDocs",
+      description:
+        "Buat surat, BAST, SOP, somasi, dan dokumen resmi tanpa ribet Microsoft Word.",
+      helper: "Preview modul",
+      icon: DocumentIcon,
+      iconClass: "bg-emerald-100 text-emerald-700",
+      buttonClass:
+        "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200",
+      actionLabel: "Buka KilatDocs",
+      onClick: onOpenDocuments,
+    },
   ];
 
   return (
@@ -722,7 +742,7 @@ function QuickActionCards({
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
         {actions.map((action) => {
           const Icon = action.icon;
 
