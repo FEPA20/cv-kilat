@@ -1,5 +1,6 @@
 // CK-DOC-00B-SAFE-V2
 import { useMemo, useState } from "react";
+import DocumentBuilderModal from "./DocumentBuilderModal";
 import {
   KILAT_DOCS_CATALOG,
   KILAT_DOCS_CATEGORIES,
@@ -157,7 +158,7 @@ function DocumentCard({ document, onOpen }) {
 }
 
 
-function DocumentDetailModal({ document, onClose }) {
+function DocumentDetailModal({ document, onClose, onStart }) {
   if (!document) return null;
 
   return (
@@ -277,11 +278,10 @@ function DocumentDetailModal({ document, onClose }) {
         <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
           <button
             type="button"
-            disabled
-            className="inline-flex cursor-not-allowed items-center justify-center rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-400"
-            title="Generator dokumen akan diaktifkan pada CK-DOC-01/CK-DOC-02"
+            onClick={() => onStart?.(document)}
+            className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-700"
           >
-            Mulai Buat Dokumen · Coming Soon
+            Mulai Buat Dokumen
           </button>
 
           <button
@@ -307,6 +307,8 @@ export default function DocumentLandingPage({
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY_ID);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDocument, setSelectedDocument] = useState(null);
+  // CK-DOC-01-SAFE-V2
+  const [builderDocument, setBuilderDocument] = useState(null);
 
   const featuredDocuments = useMemo(
     () => KILAT_DOCS_CATALOG.filter((document) => document.featured).slice(0, 6),
@@ -560,6 +562,18 @@ export default function DocumentLandingPage({
         <DocumentDetailModal
           document={selectedDocument}
           onClose={() => setSelectedDocument(null)}
+          onStart={(documentToBuild) => {
+            // CK-DOC-01-FIX-BUILDER-SCOPE
+            setSelectedDocument(null);
+            setBuilderDocument(documentToBuild);
+          }}
+        />
+      ) : null}
+
+      {builderDocument ? (
+        <DocumentBuilderModal
+          document={builderDocument}
+          onClose={() => setBuilderDocument(null)}
         />
       ) : null}
     </main>
