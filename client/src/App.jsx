@@ -19,6 +19,9 @@ const CoverLetterPage = lazy(() =>
 const UploadDocumentPage = lazy(() =>
   import("./pages/UploadDocumentPage")
 );
+const DocumentLandingPage = lazy(() =>
+  import("./pages/documents/DocumentLandingPage")
+);
 
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPolicyPage = lazy(() =>
@@ -163,6 +166,7 @@ export default function App() {
           "dashboard",
           "upload-document",
           "cover-letter",
+          "documents",
         ].includes(destination)
       ) {
         setPage(destination);
@@ -261,6 +265,13 @@ export default function App() {
   const openTemplates = () => {
     resetCvWorkspace();
     setPage("templates");
+  };
+
+  // CK-DOC-00A-SAFE-V2
+  const openDocuments = () => {
+    setShowLogin(false);
+    setPendingAfterLogin(null);
+    setPage("documents");
   };
 
   const openBlankBuilder = async () => {
@@ -401,6 +412,12 @@ export default function App() {
   setPendingAfterLogin(null);
   return;
 }
+
+    if (pendingAfterLogin === "documents") {
+      setPage("documents");
+      setPendingAfterLogin(null);
+      return;
+    }
 
     setPendingAfterLogin(null);
 
@@ -973,6 +990,31 @@ export default function App() {
   }
 
   // ======================================================
+  // KILATDOCS PAGE
+  // CK-DOC-00A-SAFE-V2
+  // ======================================================
+  if (page === "documents") {
+    return (
+      <>
+        <DocumentLandingPage
+          user={user}
+          onBack={() => {
+            if (user) {
+              setPage("dashboard");
+            } else {
+              setPage("landing");
+            }
+          }}
+          onStartCv={openTemplates}
+          onLogin={() => openLogin("documents")}
+        />
+
+        {authOverlays}
+      </>
+    );
+  }
+
+  // ======================================================
   // UPLOAD DOCUMENT PAGE
   // ======================================================
   if (page === "upload-document") {
@@ -1068,6 +1110,7 @@ export default function App() {
         user={user}
         onCreate={openTemplates}
         onUploadDocument={() => setPage("upload-document")}
+        onOpenDocuments={openDocuments}
         onEdit={(cvData) => {
           setEditData(cvData);
           setDesignData(cvData?.data || null);
