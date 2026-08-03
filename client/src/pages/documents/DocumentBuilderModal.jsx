@@ -1,5 +1,6 @@
 // CK-DOC-01-SAFE-V2
 import { useEffect, useMemo, useState } from "react";
+import { saveKilatDocsDraft } from "../../lib/kilatDocsDraftService";
 
 function buildInitialForm(document) {
   const fields = Array.isArray(document?.fields) ? document.fields : [];
@@ -324,10 +325,13 @@ export default function DocumentBuilderModal({
 }) {
   const [formData, setFormData] = useState(() => buildInitialForm(document));
   const [activeField, setActiveField] = useState("");
+  // CK-DOC-04B-SAFE
+  const [saveState, setSaveState] = useState({ status: "idle", message: "" });
 
   useEffect(() => {
     setFormData(buildInitialForm(document));
     setActiveField("");
+    setSaveState({ status: "idle", message: "" });
   }, [document]);
 
   const fields = Array.isArray(document?.fields) ? document.fields : [];
@@ -342,6 +346,42 @@ export default function DocumentBuilderModal({
     () => createDraftText(document, formData),
     [document, formData],
   );
+
+  const canSaveDraft = completedCount > 0 && saveState.status !== "saving";
+
+  const handleSaveDraft = async () => {
+    if (!completedCount) {
+      setSaveState({
+        status: "error",
+        message: "Isi minimal satu field sebelum menyimpan draft.",
+      });
+      return;
+    }
+
+    setSaveState({
+      status: "saving",
+      message: "Menyimpan draft...",
+    });
+
+    const result = await saveKilatDocsDraft({
+      document,
+      formData,
+      draftContent: draftText,
+    });
+
+    if (!result.ok) {
+      setSaveState({
+        status: "error",
+        message: result.message || "Draft gagal disimpan.",
+      });
+      return;
+    }
+
+    setSaveState({
+      status: "success",
+      message: "Draft berhasil disimpan.",
+    });
+  };
 
   if (!document) return null;
 
@@ -433,7 +473,7 @@ export default function DocumentBuilderModal({
             </p>
 
             <p className="mt-2 text-sm leading-6 text-amber-900">
-              Draft masih berupa preview lokal. Data belum disimpan ke database. Export DOCX/PDF, payment dokumen, dan AI interview akan dibuat pada tahap berikutnya.
+              Draft sekarang bisa disimpan ke database. Export DOCX/PDF, payment dokumen, dan AI interview akan dibuat pada tahap berikutnya.
             </p>
           </div>
         </section>
@@ -473,14 +513,27 @@ export default function DocumentBuilderModal({
           </div>
 
           <div className="border-t border-slate-200 bg-white p-5 sm:p-6">
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={!canSaveDraft}
+                className={`inline-flex items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-black transition ${
+                  canSaveDraft
+                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700"
+                    : "cursor-not-allowed bg-slate-100 text-slate-400"
+                }`}
+              >
+                {saveState.status === "saving" ? "Menyimpan..." : "Simpan Draft"}
+              </button>
+
               <button
                 type="button"
                 disabled
                 className="inline-flex cursor-not-allowed items-center justify-center rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-400"
-                title="Simpan/export akan dibuat pada tahap berikutnya"
+                title="Export DOCX/PDF akan dibuat pada tahap berikutnya"
               >
-                Simpan / Export · Coming Soon
+                Export · Coming Soon
               </button>
 
               <button
@@ -491,6 +544,20 @@ export default function DocumentBuilderModal({
                 Tutup
               </button>
             </div>
+
+            {saveState.message ? (
+              <p
+                className={`mt-3 rounded-2xl px-4 py-3 text-sm font-bold ${
+                  saveState.status === "success"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : saveState.status === "error"
+                      ? "bg-rose-50 text-rose-700"
+                      : "bg-sky-50 text-sky-700"
+                }`}
+              >
+                {saveState.message}
+              </p>
+            ) : null}
           </div>
         </section>
       </article>
