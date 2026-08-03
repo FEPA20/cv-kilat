@@ -72,6 +72,41 @@ function isDocumentActive(document) {
   return getDocumentStatus(document) === "ACTIVE";
 }
 
+// CK-DOC-04B1-ACTIVE-FIRST
+function getDocumentStatusOrder(document) {
+  const status = getDocumentStatus(document);
+
+  if (status === "ACTIVE") return 0;
+  if (status === "COMING_SOON") return 1;
+  if (status === "ARCHIVED") return 2;
+
+  return 9;
+}
+
+function getDocumentSortOrder(document) {
+  const value = Number(document?.sortOrder ?? document?.sort_order ?? 9999);
+
+  return Number.isFinite(value) ? value : 9999;
+}
+
+function sortDocumentsByStatus(documents) {
+  return [...documents].sort((a, b) => {
+    const statusOrder = getDocumentStatusOrder(a) - getDocumentStatusOrder(b);
+
+    if (statusOrder !== 0) {
+      return statusOrder;
+    }
+
+    const sortOrder = getDocumentSortOrder(a) - getDocumentSortOrder(b);
+
+    if (sortOrder !== 0) {
+      return sortOrder;
+    }
+
+    return String(a?.title || "").localeCompare(String(b?.title || ""), "id");
+  });
+}
+
 function StatusBadge({ status, className = "" }) {
   const normalizedStatus = String(status || "COMING_SOON").toUpperCase();
   const meta =
@@ -417,14 +452,16 @@ export default function DocumentLandingPage({
   }, []);
 
   const featuredDocuments = useMemo(
-    () => catalogDocuments.filter((document) => document.featured).slice(0, 6),
-    []
+    () =>
+      sortDocumentsByStatus(
+        catalogDocuments.filter((document) => document.featured),
+      ).slice(0, 6),
+    [catalogDocuments]
   );
 
   const filteredDocuments = useMemo(() => {
     const keyword = normalizeText(searchQuery);
-
-    return catalogDocuments.filter((document) => {
+    const matchedDocuments = catalogDocuments.filter((document) => {
       const categoryMatches =
         selectedCategory === ALL_CATEGORY_ID || document.categoryId === selectedCategory;
 
@@ -439,10 +476,11 @@ export default function DocumentLandingPage({
         ...document.tags,
         ...document.fields,
       ].join(" "));
-
       return searchableText.includes(keyword);
     });
-  }, [searchQuery, selectedCategory]);
+
+    return sortDocumentsByStatus(matchedDocuments);
+  }, [searchQuery, selectedCategory, catalogDocuments]);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -585,7 +623,7 @@ export default function DocumentLandingPage({
               <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-600">Daftar dokumen</p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Pilih dokumen yang ingin dibuat</h2>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-                Katalog dapat dimuat dari database. Dokumen berstatus COMING_SOON tetap terlihat, tetapi belum bisa dibuat.
+                Katalog dapat dimuat dari database. Dokumen ACTIVE ditampilkan paling atas, sedangkan COMING_SOON tetap terlihat tetapi belum bisa dibuat.
               </p>
             </div>
             <div className="w-full max-w-xl">
