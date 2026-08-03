@@ -1,10 +1,11 @@
 // CK-DOC-00B-SAFE-V2
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DocumentBuilderModal from "./DocumentBuilderModal";
+import { fetchKilatDocsCatalogWithFallback } from "../../lib/kilatDocsCatalogService";
 import {
   KILAT_DOCS_CATALOG,
   KILAT_DOCS_CATEGORIES,
-  KILAT_DOCS_TOTAL,
+  // CK-DOC-03B-FIX-IMPORT-TOTAL
   getKilatDocsCategory,
   getKilatDocsCountByCategory,
 } from "../../data/kilatDocsCatalog";
@@ -304,21 +305,62 @@ export default function DocumentLandingPage({
   onLogin = () => {},
 }) {
   // CK-DOC-00C-SAFE-V2
+  // CK-DOC-03B-SAFE-V2
+
+  const [catalogCategories, setCatalogCategories] = useState(KILAT_DOCS_CATEGORIES);
+
+  const [catalogDocuments, setCatalogDocuments] = useState(KILAT_DOCS_CATALOG);
+
+  const [catalogSource, setCatalogSource] = useState("local");
+
+  const [catalogError, setCatalogError] = useState("");
+
+
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY_ID);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDocument, setSelectedDocument] = useState(null);
   // CK-DOC-01-SAFE-V2
   const [builderDocument, setBuilderDocument] = useState(null);
 
+
+  useEffect(() => {
+
+    let isMounted = true;
+
+
+    fetchKilatDocsCatalogWithFallback().then((result) => {
+
+      if (!isMounted) return;
+
+
+      setCatalogCategories(result.categories);
+
+      setCatalogDocuments(result.documents);
+
+      setCatalogSource(result.source);
+
+      setCatalogError(result.errorMessage || "");
+
+    });
+
+
+    return () => {
+
+      isMounted = false;
+
+    };
+
+  }, []);
+
   const featuredDocuments = useMemo(
-    () => KILAT_DOCS_CATALOG.filter((document) => document.featured).slice(0, 6),
+    () => catalogDocuments.filter((document) => document.featured).slice(0, 6),
     []
   );
 
   const filteredDocuments = useMemo(() => {
     const keyword = normalizeText(searchQuery);
 
-    return KILAT_DOCS_CATALOG.filter((document) => {
+    return catalogDocuments.filter((document) => {
       const categoryMatches =
         selectedCategory === ALL_CATEGORY_ID || document.categoryId === selectedCategory;
 
@@ -380,11 +422,11 @@ export default function DocumentLandingPage({
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                <p className="text-3xl font-black text-white">{KILAT_DOCS_TOTAL}</p>
+                <p className="text-3xl font-black text-white">{catalogDocuments.length}</p>
                 <p className="mt-1 text-sm font-bold text-slate-300">Dokumen awal</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                <p className="text-3xl font-black text-white">{KILAT_DOCS_CATEGORIES.length}</p>
+                <p className="text-3xl font-black text-white">{catalogCategories.length}</p>
                 <p className="mt-1 text-sm font-bold text-slate-300">Kategori</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
@@ -463,12 +505,12 @@ export default function DocumentLandingPage({
             <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Kategori KilatDocs</h2>
           </div>
           <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-            {KILAT_DOCS_TOTAL} dokumen preview
+            {catalogDocuments.length} dokumen preview
           </span>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {KILAT_DOCS_CATEGORIES.map((item) => <CategoryCard key={item.id} item={item} />)}
+          {catalogCategories.map((item) => <CategoryCard key={item.id} item={item} />)}
         </div>
       </section>
 
@@ -502,7 +544,7 @@ export default function DocumentLandingPage({
             >
               Semua
             </button>
-            {KILAT_DOCS_CATEGORIES.map((category) => (
+            {catalogCategories.map((category) => (
               <button
                 key={category.id}
                 type="button"
@@ -516,7 +558,7 @@ export default function DocumentLandingPage({
 
           <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
             <p className="text-sm font-bold text-slate-600">
-              Menampilkan <span className="text-slate-950">{filteredDocuments.length}</span> dari {KILAT_DOCS_TOTAL} dokumen
+              Menampilkan <span className="text-slate-950">{filteredDocuments.length}</span> dari {catalogDocuments.length} dokumen
             </p>
             <button
               type="button"
@@ -558,7 +600,21 @@ export default function DocumentLandingPage({
             atau dokumen yang memerlukan pejabat berwenang tetap membutuhkan review profesional.
           </p>
         </div>
-      </section>      {selectedDocument ? (
+      </section>
+      <section className="mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-500 shadow-sm">
+          <span className={catalogSource === "database" ? "text-emerald-700" : "text-amber-700"}>
+            Sumber katalog: {catalogSource === "database" ? "Database Supabase" : "Fallback Lokal"}
+          </span>
+          {catalogError ? (
+            <span className="font-bold text-slate-400">
+              · {catalogError}
+            </span>
+          ) : null}
+        </div>
+      </section>
+
+      {selectedDocument ? (
         <DocumentDetailModal
           document={selectedDocument}
           onClose={() => setSelectedDocument(null)}
