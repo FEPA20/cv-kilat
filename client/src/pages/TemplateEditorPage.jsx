@@ -1396,15 +1396,16 @@ const downloadPDF = async () => {
     );
 
     /*
-     * Mobile memakai scale 2 agar stabil dan tidak
-     * melewati batas memori browser. Desktop template
-     * referensi dapat memakai 2.5 untuk ketajaman ekstra.
+     * CK-PDF-05A-SAFE
+     * Legacy PDF tetap memakai html2canvas + jsPDF.
+     * Kualitas capture dinaikkan agar teks hasil download lebih tajam.
+     * Mobile dibatasi 2.5 untuk menjaga memori browser.
      */
     const captureScale = isMobile
-      ? 2
+      ? 2.5
       : referencePdf
-        ? 2.5
-        : 2;
+        ? 3
+        : 2.75;
 
     const canvas =
       await html2canvas(
@@ -1472,15 +1473,8 @@ const downloadPDF = async () => {
       );
     }
 
-    const imageFormat = referencePdf ? "PNG" : "JPEG";
-
-    const imageData =
-      referencePdf
-        ? canvas.toDataURL("image/png")
-        : canvas.toDataURL(
-            "image/jpeg",
-            0.96,
-          );
+    const imageFormat = "PNG";
+    const imageData = canvas.toDataURL("image/png");
 
     if (!imageData || imageData === "data:,") {
       throw new Error(
@@ -1544,7 +1538,7 @@ const downloadPDF = async () => {
         imageWidth,
         imageHeight,
         undefined,
-        "FAST"
+        "NONE"
       );
     } else {
       /*
@@ -1849,14 +1843,7 @@ const downloadPDF = async () => {
         );
 
         const pageImageData =
-          imageFormat === "PNG"
-            ? pageCanvas.toDataURL(
-                "image/png"
-              )
-            : pageCanvas.toDataURL(
-                "image/jpeg",
-                0.96
-              );
+          pageCanvas.toDataURL("image/png");
 
         const pageImageHeight =
           (sliceHeight * pageWidth) /
@@ -1877,8 +1864,8 @@ const downloadPDF = async () => {
             pageImageHeight
           ),
           undefined,
-          "FAST"
-        );
+        "NONE"
+      );
 
         pageStart = safePageEnd;
         pageIndex += 1;
