@@ -94,7 +94,7 @@ export const KILAT_DOCS_CATALOG = rawDocuments.map((item) => ({
   featured: Boolean(item[7]),
   risk: item[8] || "",
   outputFormat: ["DOCX", "PDF"],
-  status: "preview",
+  status: "ACTIVE" // CK-DOC-05A-SAFE: fallback lokal seluruh katalog aktif,
 }));
 
 export const getKilatDocsCategory = (categoryId) =>
