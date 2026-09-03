@@ -327,11 +327,14 @@ export default function DocumentBuilderModal({
   const [activeField, setActiveField] = useState("");
   // CK-DOC-04B-SAFE
   const [saveState, setSaveState] = useState({ status: "idle", message: "" });
+  // CK-DOC-04C-SAFE
+  const [currentDraftId, setCurrentDraftId] = useState(null);
 
   useEffect(() => {
     setFormData(buildInitialForm(document));
     setActiveField("");
     setSaveState({ status: "idle", message: "" });
+    setCurrentDraftId(null);
   }, [document]);
 
   const fields = Array.isArray(document?.fields) ? document.fields : [];
@@ -367,6 +370,7 @@ export default function DocumentBuilderModal({
       document,
       formData,
       draftContent: draftText,
+      draftId: currentDraftId,
     });
 
     if (!result.ok) {
@@ -377,9 +381,13 @@ export default function DocumentBuilderModal({
       return;
     }
 
+    if (result.draft?.id) {
+      setCurrentDraftId(result.draft.id);
+    }
+
     setSaveState({
       status: "success",
-      message: "Draft berhasil disimpan.",
+      message: result.message || "Draft berhasil disimpan.",
     });
   };
 
@@ -524,7 +532,11 @@ export default function DocumentBuilderModal({
                     : "cursor-not-allowed bg-slate-100 text-slate-400"
                 }`}
               >
-                {saveState.status === "saving" ? "Menyimpan..." : "Simpan Draft"}
+                {saveState.status === "saving"
+                  ? "Menyimpan..."
+                  : currentDraftId
+                    ? "Update Draft"
+                    : "Simpan Draft"}
               </button>
 
               <button

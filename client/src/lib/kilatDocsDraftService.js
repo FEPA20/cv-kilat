@@ -1,4 +1,5 @@
 // CK-DOC-04B-SAFE
+// CK-DOC-04C-SAFE
 import { supabase } from "./supabase";
 
 function normalizeErrorMessage(error, fallback) {
@@ -35,6 +36,7 @@ export async function saveKilatDocsDraft({
   document,
   formData,
   draftContent,
+  draftId,
 }) {
   try {
     const { user, error: userError } = await getCurrentDraftUser();
@@ -73,10 +75,44 @@ export async function saveKilatDocsDraft({
       last_opened_at: new Date().toISOString(),
     };
 
+    const selectColumns = "id, title, document_id, status, updated_at, created_at";
+
+    if (draftId) {
+      const { data, error } = await supabase
+        .from("document_drafts")
+        .update({
+          document_id: payload.document_id,
+          title: payload.title,
+          form_data: payload.form_data,
+          draft_content: payload.draft_content,
+          status: payload.status,
+          last_opened_at: payload.last_opened_at,
+        })
+        .eq("id", draftId)
+        .eq("user_id", user.id)
+        .select(selectColumns)
+        .single();
+
+      if (error) {
+        return {
+          ok: false,
+          code: "UPDATE_FAILED",
+          message: normalizeErrorMessage(error, "Draft gagal diperbarui."),
+        };
+      }
+
+      return {
+        ok: true,
+        draft: data,
+        action: "updated",
+        message: "Draft berhasil diperbarui.",
+      };
+    }
+
     const { data, error } = await supabase
       .from("document_drafts")
       .insert(payload)
-      .select("id, title, document_id, status, updated_at, created_at")
+      .select(selectColumns)
       .single();
 
     if (error) {
@@ -90,6 +126,7 @@ export async function saveKilatDocsDraft({
     return {
       ok: true,
       draft: data,
+      action: "created",
       message: "Draft berhasil disimpan.",
     };
   } catch (error) {
