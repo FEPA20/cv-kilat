@@ -1,6 +1,7 @@
 // CK-DOC-01-SAFE-V2
 import { useEffect, useMemo, useState } from "react";
 import { saveKilatDocsDraft } from "../../lib/kilatDocsDraftService";
+import { getKilatDocsTemplateProfile } from "../../data/kilatDocsTemplateProfiles";
 
 function buildInitialForm(document) {
   const fields = Array.isArray(document?.fields) ? document.fields : [];
@@ -36,67 +37,72 @@ function pickFilledEntries(formData) {
     .filter(([, value]) => value);
 }
 
+// CK-DOC-05B-V6-SAFE
 function detectDraftType(document) {
-  const text = normalizeText(
-    [
-      document?.title,
-      document?.categoryLabel,
-      document?.useCase,
-      ...(document?.tags || []),
-    ].join(" "),
-  );
-
-  if (
-    text.includes("somasi") ||
-    text.includes("penagihan") ||
-    text.includes("tagihan") ||
-    text.includes("utang") ||
-    text.includes("pembayaran")
-  ) {
-    return "somasi";
-  }
-
-  if (
-    text.includes("bast") ||
-    text.includes("serah terima") ||
-    text.includes("handover")
-  ) {
-    return "bast";
-  }
-
-  if (
-    text.includes("klaim") ||
-    text.includes("asuransi") ||
-    text.includes("jaminan")
-  ) {
-    return "klaim";
-  }
-
-  if (
-    text.includes("sop") ||
-    text.includes("prosedur") ||
-    text.includes("instruksi kerja")
-  ) {
-    return "sop";
-  }
-
-  if (
-    text.includes("kuasa") ||
-    text.includes("pernyataan") ||
-    text.includes("permohonan")
-  ) {
-    return "surat";
-  }
-
-  return "umum";
+  return getKilatDocsTemplateProfile(document).templateType;
 }
 
 function createMetaBlock(document, formData) {
-  const nomor = findValue(formData, ["nomor surat", "nomor dokumen", "nomor"]);
-  const tanggal = findValue(formData, ["tanggal"]);
-  const pihakPertama = findValue(formData, ["pihak pertama", "pengirim", "pemohon", "nama pemberi"]);
-  const pihakKedua = findValue(formData, ["pihak kedua", "penerima", "termohon", "nama penerima"]);
+  const draftType = detectDraftType(document);
+  const nomor = findValue(formData, ["nomor surat", "nomor dokumen", "nomor invoice", "nomor klaim", "nomor polis", "nomor"]);
+  const tanggal = findValue(formData, ["tanggal", "tanggal efektif", "tanggal kejadian", "tanggal berobat"]);
+  const pihakPertama = findValue(formData, ["pihak pertama", "pengirim", "pemohon", "pemberi", "penagih", "perusahaan", "pengundang"]);
+  const pihakKedua = findValue(formData, ["pihak kedua", "penerima", "termohon", "customer", "pembayar"]);
+  const namaKaryawan = findValue(formData, ["nama karyawan", "karyawan"]);
+  const jabatan = findValue(formData, ["jabatan", "posisi", "status kerja"]);
+  const lokasi = findValue(formData, ["lokasi", "alamat", "tempat", "fasilitas kesehatan"]);
+  const pasien = findValue(formData, ["nama pasien", "pasien", "nomor pasien"]);
+  const pic = findValue(formData, ["pic", "penanggung jawab", "approval", "pemberi tugas"]);
+  const keperluan = findValue(formData, ["keperluan", "tujuan", "maksud"]);
   const perihal = document?.title || "Dokumen";
+
+  if (draftType === "sop") return [
+    `Dokumen         : ${perihal}`,
+    `Tanggal Berlaku : ${tanggal || "[isi tanggal berlaku jika ada]"}`,
+    `PIC             : ${pic || "[isi PIC/penanggung jawab]"}`,
+  ];
+
+  if (draftType === "warehouse") return [
+    `Dokumen : ${perihal}`,
+    `Tanggal : ${tanggal || "[isi tanggal]"}`,
+    `Lokasi  : ${lokasi || "[isi lokasi jika relevan]"}`,
+    `PIC     : ${pic || pihakPertama || "[isi PIC/pihak terkait]"}`,
+  ];
+
+  if (draftType === "hr") return [
+    `Dokumen  : ${perihal}`,
+    `Tanggal  : ${tanggal || "[isi tanggal]"}`,
+    `Karyawan : ${namaKaryawan || pihakKedua || pihakPertama || "[isi nama karyawan]"}`,
+    `Jabatan  : ${jabatan || "[isi jabatan/posisi jika relevan]"}`,
+  ];
+
+  if (draftType === "asuransi") return [
+    `Perihal           : ${perihal}`,
+    `Nomor Polis/Klaim : ${nomor || "[isi nomor polis/klaim jika ada]"}`,
+    `Tanggal           : ${tanggal || "[isi tanggal]"}`,
+    `Pemohon           : ${pihakPertama || "[isi pemohon/pemegang polis]"}`,
+  ];
+
+  if (draftType === "bisnis") return [
+    `Dokumen       : ${perihal}`,
+    `Tanggal       : ${tanggal || "[isi tanggal]"}`,
+    `Pihak Pertama : ${pihakPertama || "[isi pihak pertama]"}`,
+    `Pihak Kedua   : ${pihakKedua || "[isi pihak kedua/customer]"}`,
+  ];
+
+  if (draftType === "klinik") return [
+    `Dokumen   : ${perihal}`,
+    `Tanggal   : ${tanggal || "[isi tanggal]"}`,
+    `Pasien    : ${pasien || "[isi pasien jika relevan]"}`,
+    `Fasilitas : ${lokasi || "[isi fasilitas kesehatan jika relevan]"}`,
+  ];
+
+  if (draftType === "pribadi") return [
+    `Dokumen   : ${perihal}`,
+    `Tanggal   : ${tanggal || "[isi tanggal]"}`,
+    `Nama      : ${pihakPertama || "[isi nama pembuat]"}`,
+    `Keperluan : ${keperluan || document?.useCase || "[isi keperluan]"}`,
+  ];
 
   return [
     `Nomor   : ${nomor || "[isi nomor dokumen jika ada]"}`,
@@ -127,128 +133,205 @@ function createDataSummary(formData) {
 function createFormalNarrative(document, formData) {
   const draftType = detectDraftType(document);
   const tujuan = document?.useCase || "kebutuhan administrasi pengguna";
-  const pihakPertama = findValue(formData, ["pihak pertama", "pengirim", "pemohon", "nama pemberi"]);
-  const pihakKedua = findValue(formData, ["pihak kedua", "penerima", "termohon", "nama penerima"]);
-  const kronologi = findValue(formData, ["kronologi", "latar belakang", "deskripsi", "uraian"]);
-  const nominal = findValue(formData, ["nominal", "jumlah", "tagihan", "biaya", "nilai"]);
-  const batasWaktu = findValue(formData, ["batas waktu", "deadline", "tenggat", "tanggal jatuh tempo"]);
-  const barang = findValue(formData, ["barang", "produk", "unit", "aset", "imei", "sku"]);
-  const lokasi = findValue(formData, ["lokasi", "alamat", "tempat"]);
-  const bukti = findValue(formData, ["bukti", "lampiran", "dokumen pendukung"]);
+  const pihakPertama = findValue(formData, ["pihak pertama", "pengirim", "pemohon", "nama pemberi", "perusahaan", "pemberi", "pengundang"]);
+  const pihakKedua = findValue(formData, ["pihak kedua", "penerima", "termohon", "nama penerima", "customer", "pembayar"]);
+  const kronologi = findValue(formData, ["kronologi", "latar belakang", "deskripsi", "uraian", "alasan", "keterangan"]);
+  const nominal = findValue(formData, ["nominal", "jumlah", "tagihan", "biaya", "nilai", "harga", "penghasilan", "qty"]);
+  const batasWaktu = findValue(formData, ["batas waktu", "deadline", "tenggat", "jatuh tempo", "tanggal efektif"]);
+  const barang = findValue(formData, ["barang", "produk", "unit", "aset", "imei", "sku", "item", "daftar barang"]);
+  const lokasi = findValue(formData, ["lokasi", "alamat", "tempat", "fasilitas kesehatan"]);
+  const bukti = findValue(formData, ["bukti", "lampiran", "dokumen pendukung", "dokumen"]);
+  const jabatan = findValue(formData, ["jabatan", "posisi", "divisi", "status kerja"]);
+  const periode = findValue(formData, ["periode", "masa", "tanggal cuti", "masa tugas", "jangka waktu"]);
+  const polis = findValue(formData, ["nomor polis", "polis", "nomor klaim"]);
+  const pasien = findValue(formData, ["nama pasien", "pasien", "nomor pasien"]);
+  const pic = findValue(formData, ["pic", "penanggung jawab", "pemberi tugas", "approval"]);
 
-  if (draftType === "somasi") {
-    return [
-      "ISI DRAFT",
-      `Dengan hormat,`,
-      "",
-      `Melalui surat ini, ${pihakPertama || "[pihak pengirim]"} menyampaikan pemberitahuan dan/atau teguran kepada ${pihakKedua || "[pihak tujuan]"} terkait kewajiban yang belum diselesaikan.`,
-      "",
-      kronologi
-        ? `Adapun kronologi singkatnya adalah sebagai berikut: ${kronologi}`
-        : "Adapun kronologi singkat kejadian perlu dilengkapi agar surat ini memiliki dasar yang jelas.",
-      nominal
-        ? `Kewajiban/nilai yang menjadi pokok permasalahan adalah sebesar ${nominal}.`
-        : "Nominal atau kewajiban yang menjadi pokok permasalahan perlu dilengkapi apabila relevan.",
-      bukti
-        ? `Sebagai pendukung, terdapat bukti/lampiran berupa: ${bukti}.`
-        : "Bukti pendukung perlu dilampirkan apabila tersedia.",
-      "",
-      `Sehubungan dengan hal tersebut, ${pihakKedua || "[pihak tujuan]"} diminta untuk menyelesaikan kewajiban tersebut ${batasWaktu ? `paling lambat pada ${batasWaktu}` : "dalam batas waktu yang akan ditentukan"}.`,
-      "",
-      "Apabila sampai batas waktu tersebut belum terdapat penyelesaian, pihak pengirim dapat mempertimbangkan langkah lanjutan sesuai ketentuan yang berlaku.",
-    ];
-  }
+  if (draftType === "surat") return [
+    "ISI SURAT",
+    "Dengan hormat,",
+    "",
+    `${pihakPertama || "[pihak pengirim/pembuat]"} menyampaikan ${document?.title || "dokumen ini"} kepada ${pihakKedua || "[pihak tujuan/penerima]"} untuk keperluan: ${tujuan}.`,
+    kronologi ? `Pokok keterangan/permohonan: ${kronologi}` : "Pokok keterangan atau permohonan perlu dilengkapi secara jelas.",
+    batasWaktu ? `Waktu/tanggal yang berkaitan: ${batasWaktu}.` : "",
+    "",
+    "Demikian surat ini dibuat dan disampaikan untuk dapat dipergunakan sebagaimana mestinya.",
+  ].filter(Boolean);
 
-  if (draftType === "bast") {
-    return [
-      "ISI DRAFT",
-      `Pada hari/tanggal sebagaimana tercantum dalam dokumen ini, ${pihakPertama || "[pihak pertama]"} telah menyerahkan kepada ${pihakKedua || "[pihak kedua]"} objek/barang/dokumen yang dijelaskan di bawah ini.`,
-      "",
-      barang
-        ? `Objek yang diserahterimakan: ${barang}.`
-        : "Objek yang diserahterimakan perlu dilengkapi secara jelas.",
-      lokasi
-        ? `Lokasi serah terima: ${lokasi}.`
-        : "Lokasi serah terima perlu dilengkapi apabila relevan.",
-      kronologi
-        ? `Keterangan tambahan: ${kronologi}`
-        : "Keterangan tambahan dapat dilengkapi sesuai kondisi serah terima.",
-      "",
-      "Dengan ditandatanganinya dokumen ini, para pihak menyatakan bahwa proses serah terima telah dilakukan sesuai kondisi yang disepakati.",
-    ];
-  }
+  if (draftType === "penagihan") return [
+    "POKOK PENAGIHAN / TEGURAN",
+    "Dengan hormat,",
+    "",
+    `${pihakPertama || "[pihak penagih]"} menyampaikan penagihan/pemberitahuan kepada ${pihakKedua || "[pihak tertagih]"} terkait kewajiban yang belum diselesaikan.`,
+    nominal ? `Nilai kewajiban/tagihan: ${nominal}.` : "Nilai kewajiban/tagihan perlu dilengkapi.",
+    batasWaktu ? `Batas penyelesaian/jatuh tempo: ${batasWaktu}.` : "Batas penyelesaian perlu ditentukan.",
+    kronologi ? `Kronologi/riwayat komunikasi: ${kronologi}` : "Riwayat penagihan atau kronologi dapat dilengkapi.",
+    bukti ? `Bukti pendukung: ${bukti}.` : "",
+  ].filter(Boolean);
 
-  if (draftType === "klaim") {
-    return [
-      "ISI DRAFT",
-      `Dengan hormat,`,
-      "",
-      `Melalui dokumen ini, ${pihakPertama || "[pemohon]"} mengajukan klaim/permohonan kepada ${pihakKedua || "[pihak tujuan]"} untuk kebutuhan: ${tujuan}.`,
-      "",
-      kronologi
-        ? `Kronologi kejadian: ${kronologi}`
-        : "Kronologi kejadian perlu dilengkapi secara jelas dan berurutan.",
-      barang
-        ? `Objek klaim: ${barang}.`
-        : "Objek klaim perlu dilengkapi apabila relevan.",
-      nominal
-        ? `Estimasi nilai klaim/kerugian: ${nominal}.`
-        : "Nilai klaim/kerugian perlu dilengkapi apabila tersedia.",
-      bukti
-        ? `Dokumen pendukung: ${bukti}.`
-        : "Dokumen pendukung perlu dilampirkan untuk memperkuat pengajuan.",
-      "",
-      "Demikian pengajuan ini disampaikan agar dapat diproses sesuai ketentuan yang berlaku.",
-    ];
-  }
+  if (draftType === "hr") return [
+    "ADMINISTRASI HR & KARYAWAN",
+    `Dokumen ini dibuat untuk kebutuhan: ${tujuan}.`,
+    `Karyawan/pihak terkait: ${pihakPertama || pihakKedua || "[nama karyawan/pihak terkait]"}.`,
+    jabatan ? `Jabatan/posisi/status: ${jabatan}.` : "Jabatan/posisi/status kerja perlu dilengkapi apabila relevan.",
+    periode ? `Periode/tanggal efektif: ${periode}.` : "",
+    kronologi ? `Keterangan/alasan: ${kronologi}` : "",
+    pic ? `PIC/atasan/approval: ${pic}.` : "",
+  ].filter(Boolean);
 
-  if (draftType === "sop") {
-    return [
-      "ISI DRAFT",
-      `Dokumen ini disusun sebagai panduan pelaksanaan untuk kebutuhan: ${tujuan}.`,
-      "",
-      "TUJUAN",
-      kronologi || "Menjelaskan standar langkah kerja agar proses berjalan konsisten, tertib, dan terdokumentasi.",
-      "",
-      "RUANG LINGKUP",
-      lokasi
-        ? `Prosedur ini berlaku pada area/lokasi: ${lokasi}.`
-        : "Ruang lingkup prosedur perlu dilengkapi sesuai proses yang akan diatur.",
-      "",
-      "KETENTUAN UMUM",
-      "- Setiap pihak yang terlibat wajib mengikuti tahapan yang ditetapkan.",
-      "- Setiap aktivitas penting perlu dicatat dan dapat ditelusuri kembali.",
-      "- Penyimpangan proses harus dilaporkan kepada pihak penanggung jawab.",
-    ];
-  }
+  if (draftType === "sop") return [
+    "TUJUAN",
+    kronologi || `Menetapkan standar pelaksanaan untuk: ${tujuan}.`,
+    "",
+    "RUANG LINGKUP",
+    lokasi ? `Berlaku pada area/lokasi: ${lokasi}.` : "Ruang lingkup proses perlu ditentukan.",
+    "",
+    "TANGGUNG JAWAB",
+    pic ? `PIC/penanggung jawab: ${pic}.` : "- PIC wajib ditentukan sesuai struktur organisasi.",
+    "",
+    "PROSEDUR",
+    "- Persiapan dan pemeriksaan dokumen/data yang dibutuhkan.",
+    "- Pelaksanaan pekerjaan sesuai urutan proses yang ditetapkan.",
+    "- Pencatatan hasil, penyimpangan, dan bukti pelaksanaan.",
+    "- Eskalasi kepada atasan/PIC apabila terjadi kendala.",
+    "",
+    "KONTROL & EVALUASI",
+    "- Hasil pekerjaan diperiksa secara berkala.",
+    "- Temuan ditindaklanjuti dan didokumentasikan.",
+  ];
+
+  if (draftType === "warehouse") return [
+    "RINCIAN OPERASIONAL WAREHOUSE / LOGISTIK",
+    `Jenis proses: ${document?.title || "Dokumen Warehouse"}.`,
+    barang ? `Barang/SKU/Unit: ${barang}.` : "Barang/SKU/Unit perlu dilengkapi.",
+    lokasi ? `Lokasi asal/tujuan: ${lokasi}.` : "Lokasi proses perlu dilengkapi apabila relevan.",
+    nominal ? `Qty/nilai terkait: ${nominal}.` : "",
+    kronologi ? `Kondisi/keterangan: ${kronologi}` : "Kondisi dan keterangan operasional perlu dicatat.",
+    bukti ? `Dokumen/bukti pendukung: ${bukti}.` : "",
+    "",
+    "VERIFIKASI",
+    "- Pastikan identitas barang, qty, lokasi, dan kondisi sesuai kondisi aktual.",
+    "- Pihak terkait melakukan pengecekan sebelum dokumen dinyatakan selesai.",
+  ].filter(Boolean);
+
+  if (draftType === "asuransi") return [
+    "PENGAJUAN / ADMINISTRASI KLAIM",
+    "Dengan hormat,",
+    `${pihakPertama || "[pemegang polis/pemohon]"} mengajukan dokumen kepada ${pihakKedua || "[perusahaan asuransi/pihak tujuan]"} untuk: ${tujuan}.`,
+    polis ? `Nomor polis/klaim: ${polis}.` : "Nomor polis/klaim perlu dilengkapi apabila tersedia.",
+    kronologi ? `Kronologi kejadian: ${kronologi}` : "Kronologi kejadian perlu disusun secara runtut.",
+    barang ? `Objek klaim: ${barang}.` : "",
+    nominal ? `Nilai klaim/kerugian: ${nominal}.` : "",
+    bukti ? `Dokumen pendukung: ${bukti}.` : "Dokumen pendukung perlu dilampirkan sesuai ketentuan polis.",
+  ].filter(Boolean);
+
+  if (draftType === "bisnis") return [
+    "RINGKASAN TRANSAKSI / HUBUNGAN BISNIS",
+    `Dokumen: ${document?.title || "Dokumen Bisnis"}.`,
+    `Pihak pertama: ${pihakPertama || "[pihak pertama]"}.`,
+    `Pihak kedua/customer: ${pihakKedua || "[pihak kedua/customer]"}.`,
+    barang ? `Barang/jasa/objek: ${barang}.` : "",
+    nominal ? `Nilai/harga/nominal: ${nominal}.` : "",
+    periode ? `Periode/jangka waktu: ${periode}.` : "",
+    kronologi ? `Ruang lingkup/keterangan: ${kronologi}` : "Ruang lingkup atau keterangan transaksi perlu dilengkapi.",
+  ].filter(Boolean);
+
+  if (draftType === "klinik") return [
+    "ADMINISTRASI RUMAH SAKIT / KLINIK",
+    `Jenis dokumen: ${document?.title || "Dokumen Administrasi"}.`,
+    pasien ? `Pasien: ${pasien}.` : "Identitas pasien perlu dilengkapi sesuai kebutuhan administratif.",
+    lokasi ? `Fasilitas/lokasi: ${lokasi}.` : "",
+    kronologi ? `Keterangan administratif: ${kronologi}` : "",
+    bukti ? `Dokumen yang disertakan/diserahterimakan: ${bukti}.` : "",
+    "",
+    "CATATAN ADMINISTRASI",
+    "- Dokumen ini tidak menggantikan diagnosis, keputusan klinis, atau rekam medis resmi.",
+    "- Penggunaan data pasien harus mengikuti prosedur privasi fasilitas kesehatan.",
+  ].filter(Boolean);
+
+  if (draftType === "pribadi") return [
+    "PERNYATAAN / KETERANGAN PRIBADI",
+    `Saya/yang bertanda tangan pada dokumen ini menyampaikan ${document?.title || "pernyataan"} untuk keperluan: ${tujuan}.`,
+    lokasi ? `Alamat/lokasi terkait: ${lokasi}.` : "",
+    nominal ? `Nilai/penghasilan yang dinyatakan: ${nominal}.` : "",
+    kronologi ? `Keterangan/kronologi: ${kronologi}` : "Isi pernyataan atau keterangan perlu dilengkapi.",
+    bukti ? `Lampiran/bukti pendukung: ${bukti}.` : "",
+  ].filter(Boolean);
 
   return [
-    "ISI DRAFT",
+    "ISI DOKUMEN",
     `Dokumen “${document?.title || "Dokumen"}” ini disusun untuk kebutuhan: ${tujuan}.`,
-    "",
-    pihakPertama || pihakKedua
-      ? `Dokumen ini melibatkan ${pihakPertama || "[pihak pertama]"} dan ${pihakKedua || "[pihak kedua]"}.`
-      : "Pihak-pihak terkait perlu dilengkapi agar dokumen dapat digunakan dengan jelas.",
-    kronologi
-      ? `Uraian/kronologi: ${kronologi}`
-      : "Uraian atau kronologi perlu dilengkapi sesuai kebutuhan dokumen.",
-    bukti
-      ? `Bukti atau lampiran pendukung: ${bukti}.`
-      : "Bukti atau lampiran pendukung dapat ditambahkan apabila tersedia.",
-    "",
-    "Dokumen ini perlu diperiksa kembali sebelum digunakan sebagai dokumen final.",
+    kronologi ? `Uraian: ${kronologi}` : "Uraian dokumen perlu dilengkapi.",
   ];
 }
 
-function createClosingBlock() {
+function createClosingBlock(document, formData) {
+  const draftType = detectDraftType(document);
+  const pihakPertama = findValue(formData, ["pihak pertama", "pengirim", "pemohon", "nama pemberi", "pemberi", "perusahaan"]);
+  const pihakKedua = findValue(formData, ["pihak kedua", "penerima", "termohon", "nama penerima", "customer"]);
+  const pic = findValue(formData, ["pic", "penanggung jawab", "approval", "pemberi tugas"]);
+
+  if (draftType === "sop") return [
+    "PENGESAHAN",
+    "",
+    `Dibuat oleh : ${pic || "[PIC/Penyusun]"}`,
+    "Diperiksa   : [Atasan/Reviewer]",
+    "Disetujui   : [Pejabat Berwenang]",
+  ];
+
+  if (draftType === "warehouse") return [
+    "SERAH TERIMA / VERIFIKASI",
+    "",
+    `Pihak/PIC 1 : ${pihakPertama || "[Nama/Tanda Tangan]"}`,
+    `Pihak/PIC 2 : ${pihakKedua || "[Nama/Tanda Tangan]"}`,
+  ];
+
+  if (draftType === "hr") return [
+    "PENGESAHAN / PERSETUJUAN",
+    "",
+    `Karyawan/Pihak terkait : ${pihakKedua || pihakPertama || "[Nama/Tanda Tangan]"}`,
+    "HR / Atasan             : [Nama/Tanda Tangan]",
+  ];
+
+  if (draftType === "bisnis") return [
+    "PARA PIHAK",
+    "",
+    `Pihak Pertama : ${pihakPertama || "[Nama/Tanda Tangan]"}`,
+    `Pihak Kedua   : ${pihakKedua || "[Nama/Tanda Tangan]"}`,
+  ];
+
+  if (draftType === "klinik") return [
+    "VERIFIKASI ADMINISTRASI",
+    "",
+    `Pemohon/Penerima : ${pihakPertama || pihakKedua || "[Nama/Tanda Tangan]"}`,
+    "Petugas Admin     : [Nama/Tanda Tangan]",
+  ];
+
+  if (draftType === "pribadi") return [
+    "PENUTUP",
+    "Demikian pernyataan/keterangan ini dibuat untuk dipergunakan sebagaimana mestinya.",
+    "",
+    "Yang membuat pernyataan,",
+    "",
+    `${pihakPertama || "[Nama dan Tanda Tangan]"}`,
+  ];
+
+  if (draftType === "asuransi") return [
+    "PENUTUP",
+    "Demikian pengajuan ini disampaikan. Data dan dokumen pendukung perlu diperiksa kembali sebelum dikirim.",
+    "",
+    "Pemohon,",
+    "",
+    `${pihakPertama || "[Nama dan Tanda Tangan]"}`,
+  ];
+
   return [
     "PENUTUP",
-    "Demikian draft awal ini dibuat untuk diperiksa dan disesuaikan kembali sebelum digunakan.",
+    "Demikian draft ini dibuat untuk diperiksa dan disesuaikan kembali sebelum digunakan.",
     "",
     "Hormat kami,",
     "",
-    "",
-    "[Nama dan Tanda Tangan]",
+    `${pihakPertama || "[Nama dan Tanda Tangan]"}`,
   ];
 }
 
@@ -267,7 +350,7 @@ function createDraftText(document, formData) {
       "- Isi tanggal, kronologi, nominal, barang, atau bukti jika relevan.",
       "- Preview akan berubah otomatis setelah data diisi.",
       "",
-      "Catatan: tahap CK-DOC-02 masih preview lokal. Export, penyimpanan, AI interview, dan payment dokumen belum aktif.",
+      "Catatan: draft dapat disimpan ke akun pengguna. Export DOCX/PDF dan payment dokumen masih tahap berikutnya.",
     ].join("\n");
   }
 
@@ -281,12 +364,12 @@ function createDraftText(document, formData) {
     "",
     ...createFormalNarrative(document, formData),
     "",
-    ...createClosingBlock(),
+    ...createClosingBlock(document, formData),
     "",
     "CATATAN SISTEM",
     "- Draft ini masih perlu diperiksa ulang oleh pengguna.",
     "- Pastikan nama pihak, tanggal, nominal, kronologi, dan bukti sudah benar.",
-    "- Export DOCX/PDF, penyimpanan, AI interview, dan payment dokumen belum aktif pada CK-DOC-02.",
+    "- Draft dapat disimpan dan diperbarui. Export DOCX/PDF dan payment dokumen masih tahap berikutnya.",
   ].join("\n");
 }
 
@@ -338,6 +421,10 @@ export default function DocumentBuilderModal({
   }, [document]);
 
   const fields = Array.isArray(document?.fields) ? document.fields : [];
+  const templateProfile = useMemo(
+    () => getKilatDocsTemplateProfile(document),
+    [document],
+  );
 
   const completedCount = useMemo(
     () =>
@@ -407,7 +494,7 @@ export default function DocumentBuilderModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">
-                CK-DOC-02 · Draft Dokumen Resmi
+                {templateProfile.shortLabel}
               </p>
 
               <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
@@ -415,7 +502,7 @@ export default function DocumentBuilderModal({
               </h2>
 
               <p className="mt-3 text-sm leading-7 text-slate-500">
-                Lengkapi field awal untuk membuat preview draft yang lebih rapi dan mendekati format dokumen resmi. Tahap ini belum menyimpan data dan belum export DOCX/PDF.
+                Template otomatis mengikuti kategori {templateProfile.label}. Lengkapi field untuk membentuk draft yang sesuai kategori. Draft dapat disimpan; export DOCX/PDF masih tahap berikutnya.
               </p>
             </div>
 
@@ -491,7 +578,7 @@ export default function DocumentBuilderModal({
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">
-                  Preview Draft
+                  Preview · {templateProfile.shortLabel}
                 </p>
 
                 <h3 className="mt-1 text-xl font-black text-slate-950">
